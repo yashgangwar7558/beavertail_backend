@@ -13,11 +13,12 @@ const invoiceSchema = new mongoose.Schema({
     uploadDate: { type: Date, default: Date.now },
     invoiceNumber: { type: String, required: true },
     vendor: { type: String, required: true },
-    invoiceDate: { type: String },
+    invoiceDate: { type: Date },
     ingredients: [ingredientsBoughtSchema],
     payment: { type: String },
     status: { type: String, default: 'Pending' },
     total: { type: String, required: true },
+    invoiceUrl: { type: String, required: true },
 });
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);

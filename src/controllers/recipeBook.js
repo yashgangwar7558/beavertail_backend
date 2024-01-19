@@ -6,14 +6,13 @@ const { inventoryCheck, costEstimation } = require('../controllers/helper');
 const Recipe = require('../models/recipeBook');
 const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
-
+const recipeCostHistory = require('../models/recipeCostHistory');
 
 exports.createRecipe = async (req, res) => {
     try {
         const { userId, name, category, methodPrep, modifierCost, menuPrice, menuType } = req.body;
         const ingredients = JSON.parse(req.body.ingredients)
         const yields = JSON.parse(req.body.yields)
-        console.log(req.body);
 
         if (!userId || !name || !category || !yields || !methodPrep || !ingredients || !modifierCost || !menuPrice || !menuType) {
             return res.json({
@@ -58,6 +57,13 @@ exports.createRecipe = async (req, res) => {
                 inventory,
             });
 
+            const costHistory = await recipeCostHistory.create({
+                userId,
+                recipeId: recipe._id,
+                cost,
+                date: new Date()
+            })
+
             res.json({ success: true, recipe });
         } else {
             return res.json({
@@ -91,8 +97,18 @@ exports.updateRecipe = async (req, res) => {
         const inventory = await inventoryCheck(ingredients, AllIngredients, UnitMaps);
         const cost = await costEstimation(ingredients, AllIngredients, UnitMaps);
 
-        // const inventory = true;
-        // const cost = 30;
+        // Ingredient update, cost history update
+        const recipeBeforeUpdate = await Recipe.findById(recipeId);
+        const ingredientsBeforeUpdate = JSON.stringify(recipeBeforeUpdate.ingredients);
+        const ingredientsAfterUpdate = JSON.stringify(ingredients);
+        if (ingredientsBeforeUpdate !== ingredientsAfterUpdate) {
+            const costHistory = await recipeCostHistory.create({
+                userId,
+                recipeId,
+                cost,
+                date: new Date(),
+            });
+        }
 
         if (req.file) {
             const { buffer } = req.file;
@@ -228,5 +244,47 @@ exports.deleteRecipe = async (req, res) => {
     } catch (error) {
         console.error('Error deleting recipe:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+exports.findAverageCostForRecipeInDateRange = async (recipeId, startDate, endDate) => {
+    try {
+        const pipeline = [];
+
+        if (startDate && endDate) {
+            pipeline.push({
+                $match: {
+                    recipeId: new mongoose.Types.ObjectId(recipeId),
+                    date: {
+                        $gte: new Date(startDate),
+                        $lte: new Date(endDate),
+                    },
+                },
+            });
+        } else {
+            pipeline.push({
+                $match: {
+                    recipeId: new mongoose.Types.ObjectId(recipeId),
+                },
+            });
+        }
+
+        pipeline.push({
+            $group: {
+                _id: null,
+                averageCost: { $avg: '$cost' },
+            },
+        });
+
+        const result = await recipeCostHistory.aggregate(pipeline);
+
+        if (result.length > 0) {
+            return result[0].averageCost;
+        } else {
+            return 0;
+        }
+    } catch (error) {
+        console.error('Error finding average cost:', error.message);
+        throw error;
     }
 };

@@ -5,7 +5,7 @@ const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
 const Invoice = require('../models/invoice');
 const purchaseHistory = require('../models/purchaseHistory');
-const {formatDate} = require('../controllers/helper');
+const { formatDate } = require('../controllers/helper');
 const { log } = require('console');
 
 exports.getIngredientWisePurchaseHistory = async (req, res) => {
@@ -13,14 +13,13 @@ exports.getIngredientWisePurchaseHistory = async (req, res) => {
         const { userId } = req.body;
 
         const ingPurchaseHistory = await purchaseHistory.find({ userId })
-            .populate('ingredientId', 'name') 
+            .populate('ingredientId', 'name')
             .populate({
                 path: 'invoiceId',
                 model: 'Invoice',
                 select: 'invoiceNumber vendor uploadDate',
             });
-            
-            
+
         const formattedData = ingPurchaseHistory.map(entry => ({
             ingredient: { id: entry.ingredientId._id, name: entry.ingredientName },
             invoices: [{

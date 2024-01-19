@@ -12,7 +12,7 @@ const billSchema = new mongoose.Schema({
     uploadDate: { type: Date, default: Date.now },
     billNumber: { type: String, required: true },
     customerName: { type: String},
-    billingDate: { type: String },
+    billingDate: { type: Date },
     itemsOrdered: [menuItemOrderedSchema],
     total: { type: String, required: true },
 });

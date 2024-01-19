@@ -7,91 +7,148 @@ const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
 const Invoice = require('../models/invoice');
 const purchaseHistory = require('../models/purchaseHistory');
+const ingredientCostHistory = require('../models/ingredientCostHistory');
+const { uploadToS3 } = require('../controllers/helper');
 const { log } = require('console');
 
 exports.processInvoice = async (req, res) => {
     try {
-        const { userId, invoiceNumber, vendor, invoiceDate, ingredients, payment, status, total } = req.body;
+        const { userId } = req.body;
+        const invoiceNumber = "INV-456";
+        const vendor = "Sysco";
+        const invoiceDate = "2024-01-10";
+        const ingredients = [
+            { name: "Salt", quantity: 2, unit: "kg", unitPrice: 150, total: "300" },
+            { name: "Chicken", quantity: 2, unit: "lbs", unitPrice: 450, total: "900" },
+            { name: "Onions", quantity: 3, unit: "kg", unitPrice: 50, total: "150" },
+        ];
+        const payment = "Bill Pay";
+        const status = "Pending";
+        const total = "940";
+
         const AllIngredients = await Ingredient.find({ userId });
         const UnitMaps = await unitMapping.find({ userId });
 
-        // Process 1 - Ingredients Update
-        for (const ingredient of ingredients) {
-            const matchingIngredient = AllIngredients.find(
-                (allIngredient) => allIngredient.name === ingredient.name
-            );
+        if (req.files && req.files.length > 0) {
+            const processingPromises = req.files.map(async (file) => {
 
-            if (matchingIngredient) {
-                const unitMap = UnitMaps.find(
-                    (unitMap) => unitMap.ingredient_id.toString() === matchingIngredient._id.toString()
-                );
+                // Process - 1 (Uploading to S3, Adding to invoice table)
+                const { buffer } = file;
+                const fileName = `${invoiceNumber}_${Date.now()}`;
+                const fileType = file.mimetype
+                const bucketName = 'beavertail-invoices-7558';
+                const invoiceUrl = await uploadToS3(buffer, fileName, fileType, bucketName);
+                const createdInvoice = await Invoice.create({
+                    userId,
+                    invoiceNumber,
+                    vendor,
+                    invoiceDate,
+                    ingredients,
+                    payment,
+                    status,
+                    total,
+                    invoiceUrl,
+                });
 
-                if (!unitMap) {
-                    throw new Error(`Unit map not found for ingredient ${ingredient.name}, maybe its a new ingredient`);
+                // Process 2 - Ingredients cost/inventory Update
+                for (const ingredient of ingredients) {
+                    const matchingIngredient = AllIngredients.find(
+                        (allIngredient) => allIngredient.name === ingredient.name
+                    );
+
+                    if (matchingIngredient) {
+                        const unitMap = UnitMaps.find(
+                            (unitMap) => unitMap.ingredient_id.toString() === matchingIngredient._id.toString()
+                        );
+
+                        if (!unitMap) {
+                            throw new Error(`Unit map not found for ingredient ${ingredient.name}, maybe its a new ingredient`);
+                        }
+
+                        const toUnit = unitMap ? unitMap.toUnit : ingredient.unit;
+                        const convertedPrevQty = matchingIngredient.inventory * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+                        const convertedPrevAvgCost = matchingIngredient.avgCost / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+                        const convertedNewQty = ingredient.quantity * getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
+                        const convertedNewCost = ingredient.unitPrice / getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
+
+                        const newAvgCost = (((convertedPrevAvgCost * convertedPrevQty) + (convertedNewCost * convertedNewQty)) / (convertedPrevQty + convertedNewQty)) * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+                        const newInventoryQty = (convertedPrevQty + convertedNewQty) / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+
+                        const updatedIngredient = await Ingredient.findById(matchingIngredient._id);
+                        updatedIngredient.avgCost = newAvgCost;
+                        updatedIngredient.inventory = newInventoryQty;
+                        await updatedIngredient.save();
+
+                        const costHistory = await ingredientCostHistory.create({
+                            userId,
+                            ingredientId: matchingIngredient._id,
+                            cost: newAvgCost,
+                            unit: matchingIngredient.invUnit,
+                            date: invoiceDate
+                        })
+
+                    } else {
+                        const newIngredient = await Ingredient.create({
+                            userId,
+                            name: ingredient.name,
+                            inventory: ingredient.quantity,
+                            invUnit: ingredient.unit,
+                            avgCost: ingredient.unitPrice,
+                        });
+
+                        const costHistory = await ingredientCostHistory.create({
+                            userId,
+                            ingredientId: newIngredient._id,
+                            cost: ingredient.unitPrice,
+                            unit: ingredient.unit,
+                            date: invoiceDate
+                        })
+                    }
                 }
 
-                const toUnit = unitMap ? unitMap.toUnit : ingredient.unit;
-                const convertedPrevQty = matchingIngredient.inventory * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
-                const convertedPrevAvgCost = matchingIngredient.avgCost / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
-                const convertedNewQty = ingredient.quantity * getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
-                const convertedNewCost = ingredient.unitPrice / getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
 
-                const newAvgCost = (((convertedPrevAvgCost * convertedPrevQty) + (convertedNewCost * convertedNewQty)) / (convertedPrevQty + convertedNewQty)) * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
-                const newInventoryQty = (convertedPrevQty + convertedNewQty) / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+                // Process 3 - Ingredient Purchase History Update
+                const AllUpdatedIngredients = await Ingredient.find({ userId });
+                for (const ingredient of ingredients) {
+                    const matchingIngredient = AllUpdatedIngredients.find(
+                        (allIngredient) => allIngredient.name === ingredient.name
+                    );
+                    const ingredientPurchaseHistory = await purchaseHistory.create({
+                        userId,
+                        ingredientId: matchingIngredient._id,
+                        ingredientName: matchingIngredient.name,
+                        invoiceId: createdInvoice._id,
+                        invoiceNumber,
+                        quantity: ingredient.quantity,
+                        unit: ingredient.unit,
+                        unitPrice: ingredient.unitPrice,
+                        total: ingredient.total
+                    })
+                }
 
-                const updatedIngredient = await Ingredient.findById(matchingIngredient._id);
-                updatedIngredient.avgCost = newAvgCost;
-                updatedIngredient.inventory = newInventoryQty;
-                await updatedIngredient.save();
+                return { success: true };
+            });
 
+            const results = await Promise.all(processingPromises);
+            const allSuccess = results.every((result) => result.success);
+
+            if (allSuccess) {
+                return res.json({
+                    success: true,
+                    message: 'Invoices processed successfully!',
+                });
             } else {
-                const newIngredient = await Ingredient.create({
-                    userId,
-                    name: ingredient.name,
-                    inventory: ingredient.quantity,
-                    invUnit: ingredient.unit,
-                    avgCost: ingredient.unitPrice,
+                return res.json({
+                    success: false,
+                    message: 'Some files failed to process.',
                 });
             }
+        } else {
+            return res.json({
+                success: false,
+                message: 'Invoice files not received!',
+            });
         }
-
-        // Process 2 - Invoice Table Entry
-        const invoice = await Invoice.create({
-            userId,
-            invoiceNumber,
-            vendor,
-            invoiceDate,
-            ingredients,
-            payment,
-            status,
-            total
-        });
-
-        // Process 3 - Ingredient Purchase History Update
-        const AllUpdatedIngredients = await Ingredient.find({ userId });
-        for (const ingredient of ingredients) {
-            const matchingIngredient = AllUpdatedIngredients.find(
-                (allIngredient) => allIngredient.name === ingredient.name
-            );
-
-            const ingredientPurchaseHistory = await purchaseHistory.create({
-                userId,
-                ingredientId: matchingIngredient._id,
-                ingredientName: matchingIngredient.name,
-                invoiceId: invoice._id,
-                invoiceNumber,
-                quantity: ingredient.quantity,
-                unit: ingredient.unit,
-                unitPrice: ingredient.unitPrice,
-                total: ingredient.total
-            })
-        }
-
-        return res.json({
-            success: true,
-            message: 'Invoice processed successfully',
-        });
-
     } catch (error) {
         console.error('Error processing invoice:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });

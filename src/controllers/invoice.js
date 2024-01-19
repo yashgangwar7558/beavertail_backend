@@ -22,6 +22,7 @@ exports.getInvoice = async (req, res) => {
         }
 
         invoice.uploadDate = formatDate(invoice.uploadDate);
+        invoice.invoiceDate = formatDate(invoice.invoiceDate);
 
         res.json({ success: true, invoice });
     } catch (error) {
@@ -49,6 +50,7 @@ exports.getAllInvoice = async (req, res) => {
             return {
                 ...invoice._doc,
                 uploadDate: formatDate(invoice.uploadDate),
+                invoiceDate: formatDate(invoice.invoiceDate)
             };
         });
 

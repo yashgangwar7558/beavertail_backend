@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/user');
 const Recipe = require('../models/recipeBook');
 const unitMapping = require('../models/unitmapping');
+const recipeCostHistory = require('../models/recipeCostHistory');
 const { log } = require('console');
 const { inventoryCheck, costEstimation } = require('../controllers/helper');
 // const { updateRelatedRecipes } = require('../controllers/recipeBook');
@@ -36,6 +37,13 @@ updateRelatedRecipes = async (ingredientId, userId) => {
       const newCost = await costEstimation(recipe.ingredients, AllIngredients, UnitMaps);
       recipe.cost = newCost
       await recipe.save();
+
+      const costHistory = await recipeCostHistory.create({
+        userId,
+        recipeId: recipe._id,
+        cost: newCost,
+        date: '2024-01-10'
+      })
     }));
 
   } catch (error) {
