@@ -1,22 +1,19 @@
-const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const multer = require('multer');
 const User = require('../models/user');
-const Recipe = require('../models/recipeBook');
 const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
-const Invoice = require('../models/invoice');
-const purchaseHistory = require('../models/purchaseHistory');
-const ingredientCostHistory = require('../models/ingredientCostHistory');
+const { createIngredientCostHistory } = require('../controllers/ingredientCostHistory');
+const { createInvoice } = require('../controllers/invoice');
+const { createIngredientPurchaseHistory } = require('../controllers/purchaseHistory');
+const { createIngredient, updateIngredientCostInventory } = require('../controllers/ingredients');
 const { uploadToS3 } = require('../controllers/helper');
-const { log } = require('console');
 
 exports.processInvoice = async (req, res) => {
     try {
         const { userId } = req.body;
-        const invoiceNumber = "INV-456";
+        const invoiceNumber = "INV-324";
         const vendor = "Sysco";
-        const invoiceDate = "2024-01-10";
+        const invoiceDate = "2024-01-12";
         const ingredients = [
             { name: "Salt", quantity: 2, unit: "kg", unitPrice: 150, total: "300" },
             { name: "Chicken", quantity: 2, unit: "lbs", unitPrice: 450, total: "900" },
@@ -32,13 +29,13 @@ exports.processInvoice = async (req, res) => {
         if (req.files && req.files.length > 0) {
             const processingPromises = req.files.map(async (file) => {
 
-                // Process - 1 (Uploading to S3, Adding to invoice table)
+                // Process - 1 (Uploading to S3, creating new invoice)
                 const { buffer } = file;
                 const fileName = `${invoiceNumber}_${Date.now()}`;
                 const fileType = file.mimetype
                 const bucketName = 'beavertail-invoices-7558';
-                const invoiceUrl = await uploadToS3(buffer, fileName, fileType, bucketName);
-                const createdInvoice = await Invoice.create({
+                // const invoiceUrl = await uploadToS3(buffer, fileName, fileType, bucketName);
+                const createdInvoice = await createInvoice(
                     userId,
                     invoiceNumber,
                     vendor,
@@ -47,8 +44,8 @@ exports.processInvoice = async (req, res) => {
                     payment,
                     status,
                     total,
-                    invoiceUrl,
-                });
+                    // invoiceUrl,
+                )
 
                 // Process 2 - Ingredients cost/inventory Update
                 for (const ingredient of ingredients) {
@@ -74,35 +71,19 @@ exports.processInvoice = async (req, res) => {
                         const newAvgCost = (((convertedPrevAvgCost * convertedPrevQty) + (convertedNewCost * convertedNewQty)) / (convertedPrevQty + convertedNewQty)) * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
                         const newInventoryQty = (convertedPrevQty + convertedNewQty) / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
 
-                        const updatedIngredient = await Ingredient.findById(matchingIngredient._id);
-                        updatedIngredient.avgCost = newAvgCost;
-                        updatedIngredient.inventory = newInventoryQty;
-                        await updatedIngredient.save();
-
-                        const costHistory = await ingredientCostHistory.create({
-                            userId,
-                            ingredientId: matchingIngredient._id,
-                            cost: newAvgCost,
-                            unit: matchingIngredient.invUnit,
-                            date: invoiceDate
-                        })
+                        const updateIngredient = await updateIngredientCostInventory(matchingIngredient._id, newAvgCost, newInventoryQty)
+                        const costHistory = await createIngredientCostHistory(userId, matchingIngredient._id, newAvgCost, matchingIngredient.invUnit, invoiceDate)
 
                     } else {
-                        const newIngredient = await Ingredient.create({
+                        const newIngredient = await createIngredient(
                             userId,
-                            name: ingredient.name,
-                            inventory: ingredient.quantity,
-                            invUnit: ingredient.unit,
-                            avgCost: ingredient.unitPrice,
-                        });
+                            ingredient.name,
+                            ingredient.quantity,
+                            ingredient.unit,
+                            ingredient.unitPrice,
+                        );
 
-                        const costHistory = await ingredientCostHistory.create({
-                            userId,
-                            ingredientId: newIngredient._id,
-                            cost: ingredient.unitPrice,
-                            unit: ingredient.unit,
-                            date: invoiceDate
-                        })
+                        const costHistory = await createIngredientCostHistory(userId, newIngredient._id, ingredient.unitPrice, ingredient.unit, invoiceDate)
                     }
                 }
 
@@ -113,17 +94,17 @@ exports.processInvoice = async (req, res) => {
                     const matchingIngredient = AllUpdatedIngredients.find(
                         (allIngredient) => allIngredient.name === ingredient.name
                     );
-                    const ingredientPurchaseHistory = await purchaseHistory.create({
+                    const ingredientPurchaseHistory = await createIngredientPurchaseHistory(
                         userId,
-                        ingredientId: matchingIngredient._id,
-                        ingredientName: matchingIngredient.name,
-                        invoiceId: createdInvoice._id,
+                        matchingIngredient._id,
+                        matchingIngredient.name,
+                        createdInvoice._id,
                         invoiceNumber,
-                        quantity: ingredient.quantity,
-                        unit: ingredient.unit,
-                        unitPrice: ingredient.unitPrice,
-                        total: ingredient.total
-                    })
+                        ingredient.quantity,
+                        ingredient.unit,
+                        ingredient.unitPrice,
+                        ingredient.total
+                    )
                 }
 
                 return { success: true };

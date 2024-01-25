@@ -1,11 +1,9 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const multer = require('multer');
-const User = require('../models/user');
 const Recipe = require('../models/recipeBook');
-const Ingredient = require('../models/ingredients');
-const Sales = require('../models/sales');
 const salesHistory = require('../models/salesHistory');
+const { createBill } = require('../controllers/sales')
+const { createSalesHistory } = require('../controllers/salesHistory')
 const { log } = require('console');
 
 exports.processBill = async (req, res) => {
@@ -13,14 +11,14 @@ exports.processBill = async (req, res) => {
         const { userId, billNumber, customerName, billingDate, itemsOrdered, total } = req.body;
 
         // Process 1 - Sales table bill entry
-        const bill = await Sales.create({
+        const bill = await createBill(
             userId,
             billNumber,
             customerName,
             billingDate,
             itemsOrdered,
             total
-        });
+        )
 
         // Process 2 - Menu Item purchase history update
         const itemsOrderedNames = itemsOrdered.map(itemOrdered => itemOrdered.name);
@@ -30,16 +28,16 @@ exports.processBill = async (req, res) => {
                 (menuItem) => menuItem.name === itemOrdered.name
             );
 
-            const recipeSalesHistory = await salesHistory.create({
+            const recipeSalesHistory = await createSalesHistory(
                 userId,
-                recipeId: matchingRecipe._id,
-                recipeName: matchingRecipe.name,
-                billingId: bill._id,
+                matchingRecipe._id,
+                matchingRecipe.name,
+                bill._id,
                 billNumber,
-                quantity: itemOrdered.quantity,
-                menuCost: itemOrdered.menuCost,
-                total: itemOrdered.total
-            })
+                itemOrdered.quantity,
+                itemOrdered.menuPrice,
+                itemOrdered.total,
+            )
         }
 
         return res.json({

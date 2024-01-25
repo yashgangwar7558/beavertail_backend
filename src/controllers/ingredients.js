@@ -4,24 +4,12 @@ const User = require('../models/user');
 const Recipe = require('../models/recipeBook');
 const Ingredient = require('../models/ingredients');
 
-exports.createIngredient = async (req, res) => {
+exports.createIngredient = async (userId, name, inventory, invUnit, avgCost, category, note, shelfLife, slUnit) => {
     try {
-        const { userId, name, category, inventory, invUnit, avgCost, note, shelfLife, slUnit } = req.body;
-
-        // Check for missing fields
-        if (!userId || !name || !category || !inventory || !invUnit || !avgCost || !note || !shelfLife || !slUnit) {
-            return res.json({
-                success: false,
-                message: 'Some fields are missing!',
-            });
+        if (!userId || !name || !inventory || !invUnit || !avgCost) {
+            throw new Error('Some fields are missing or invalid!');
         }
-
-        // func for ingredients unit conversion to grams
-
-        // func to calculating avgCost
-
-        // Create a new ingredient
-        const ingredient = await Ingredient.create({
+        const result = await Ingredient.create({
             userId,
             name,
             category,
@@ -32,13 +20,25 @@ exports.createIngredient = async (req, res) => {
             shelfLife,
             slUnit,
         });
-
-        res.json({ success: true, ingredient });
+        return result
     } catch (error) {
         console.error('Error creating ingredient:', error.message);
-        res.status(500).json({ success: false, message: 'Internal Server Error' });
+        throw error;
     }
 };
+
+exports.updateIngredientCostInventory = async (ingredientId, newAvgCost, newInventoryQty) => {
+    try {
+        const updateIngredient = await Ingredient.findById(ingredientId);
+        updateIngredient.avgCost = newAvgCost;
+        updateIngredient.inventory = newInventoryQty;
+        const result = await updateIngredient.save();
+        return result;
+    } catch (error) {
+        console.error('Error updating ingredient avgcost and inventory:', error.message);
+        throw error;
+    }
+}
 
 exports.getIngredient = async (req, res) => {
     try {

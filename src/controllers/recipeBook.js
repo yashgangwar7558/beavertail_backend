@@ -1,12 +1,12 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const multer = require('multer');
 const User = require('../models/user');
 const { inventoryCheck, costEstimation } = require('../controllers/helper');
 const Recipe = require('../models/recipeBook');
 const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
-const recipeCostHistory = require('../models/recipeCostHistory');
+const { createRecipeCostHistory } = require('../controllers/recipeCostHistory');
+const { createModifierCostHistory } = require('../controllers/modifierCostHistory');
 
 exports.createRecipe = async (req, res) => {
     try {
@@ -57,12 +57,8 @@ exports.createRecipe = async (req, res) => {
                 inventory,
             });
 
-            const costHistory = await recipeCostHistory.create({
-                userId,
-                recipeId: recipe._id,
-                cost,
-                date: new Date()
-            })
+            const recipeCostHistory = await createRecipeCostHistory(userId, recipe._id, cost, new Date())
+            const modifierCostHistory = await createModifierCostHistory(userId, recipe._id, modifierCost, new Date())
 
             res.json({ success: true, recipe });
         } else {
@@ -79,12 +75,11 @@ exports.createRecipe = async (req, res) => {
 
 exports.updateRecipe = async (req, res) => {
     try {
-        const { recipeId, userId, name, category, methodPrep, menuPrice, menuType } = req.body;
+        const { recipeId, userId, name, category, methodPrep, modifierCost, menuPrice, menuType } = req.body;
         const ingredients = JSON.parse(req.body.ingredients)
         const yields = JSON.parse(req.body.yields)
-        console.log(req.body);
 
-        if (!recipeId || !userId || !name || !category || !yields || !methodPrep || !ingredients || !menuPrice || !menuType) {
+        if (!recipeId || !userId || !name || !category || !yields || !methodPrep || !ingredients || !modifierCost || !menuPrice || !menuType) {
             return res.json({
                 success: false,
                 message: 'Some fields are missing!',
@@ -102,14 +97,15 @@ exports.updateRecipe = async (req, res) => {
         const ingredientsBeforeUpdate = JSON.stringify(recipeBeforeUpdate.ingredients);
         const ingredientsAfterUpdate = JSON.stringify(ingredients);
         if (ingredientsBeforeUpdate !== ingredientsAfterUpdate) {
-            const costHistory = await recipeCostHistory.create({
-                userId,
-                recipeId,
-                cost,
-                date: new Date(),
-            });
+            const costHistory = await createRecipeCostHistory(userId, recipeId, cost, new Date())
         }
 
+        const modifierCostBeforeUpdate = recipeBeforeUpdate.modifierCost
+        const modifierCostAfterUpdate = modifierCost
+        if (modifierCostBeforeUpdate !== modifierCostAfterUpdate) {
+            const modifierCostHistory = await createModifierCostHistory(userId, recipeId, modifierCost, new Date())
+        }
+        
         if (req.file) {
             const { buffer } = req.file;
             const photoName = `${name}_${Date.now()}`;
@@ -247,44 +243,3 @@ exports.deleteRecipe = async (req, res) => {
     }
 };
 
-exports.findAverageCostForRecipeInDateRange = async (recipeId, startDate, endDate) => {
-    try {
-        const pipeline = [];
-
-        if (startDate && endDate) {
-            pipeline.push({
-                $match: {
-                    recipeId: new mongoose.Types.ObjectId(recipeId),
-                    date: {
-                        $gte: new Date(startDate),
-                        $lte: new Date(endDate),
-                    },
-                },
-            });
-        } else {
-            pipeline.push({
-                $match: {
-                    recipeId: new mongoose.Types.ObjectId(recipeId),
-                },
-            });
-        }
-
-        pipeline.push({
-            $group: {
-                _id: null,
-                averageCost: { $avg: '$cost' },
-            },
-        });
-
-        const result = await recipeCostHistory.aggregate(pipeline);
-
-        if (result.length > 0) {
-            return result[0].averageCost;
-        } else {
-            return 0;
-        }
-    } catch (error) {
-        console.error('Error finding average cost:', error.message);
-        throw error;
-    }
-};

@@ -7,7 +7,7 @@ const salesHistorySchema = new mongoose.Schema({
     billingId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Sales'},
     billNumber: { type: String, required: true},
     quantity: { type: Number },
-    menuCost: { type: Number },
+    menuPrice: { type: Number },
     total: { type: Number }
 });
 

@@ -1,12 +1,27 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const Recipe = require('../models/recipeBook');
-const Ingredient = require('../models/ingredients');
-const unitMapping = require('../models/unitmapping');
 const Invoice = require('../models/invoice');
-const purchaseHistory = require('../models/purchaseHistory');
-const {formatDate} = require('../controllers/helper');
-const { log } = require('console');
+const { formatDate } = require('../controllers/helper');
+
+exports.createInvoice = async (userId, invoiceNumber, vendor, invoiceDate, ingredients, payment, status, total, invoiceUrl) => {
+    try {
+        const result = await Invoice.create({
+            userId,
+            invoiceNumber,
+            vendor,
+            invoiceDate,
+            ingredients,
+            payment,
+            status,
+            total,
+            // invoiceUrl,
+        })
+        return result
+    } catch (err) {
+        console.log('Error creating invoice:', err.message);
+        throw err
+    }
+}
 
 exports.getInvoice = async (req, res) => {
     try {

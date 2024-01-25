@@ -1,12 +1,28 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const Recipe = require('../models/recipeBook');
-const Ingredient = require('../models/ingredients');
-const unitMapping = require('../models/unitmapping');
-const Invoice = require('../models/invoice');
 const purchaseHistory = require('../models/purchaseHistory');
 const { formatDate } = require('../controllers/helper');
 const { log } = require('console');
+
+exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredientName, invoiceId, invoiceNumber, quantity, unit, unitPrice, total) => {
+    try {
+        const result = await purchaseHistory.create({
+            userId,
+            ingredientId,
+            ingredientName,
+            invoiceId,
+            invoiceNumber,
+            quantity,
+            unit,
+            unitPrice,
+            total
+        })
+        return result
+    } catch (err) {
+        console.log('Error creating purchase history:', err.message);
+        throw err
+    }
+}
 
 exports.getIngredientWisePurchaseHistory = async (req, res) => {
     try {

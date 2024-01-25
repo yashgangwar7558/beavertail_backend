@@ -5,15 +5,15 @@ const unitMapping = require('../models/unitmapping');
 const recipeCostHistory = require('../models/recipeCostHistory');
 const { log } = require('console');
 const { inventoryCheck, costEstimation } = require('../controllers/helper');
-// const { updateRelatedRecipes } = require('../controllers/recipeBook');
+const { createRecipeCostHistory } = require('../controllers/recipeCostHistory');
 
 const ingredientSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   name: { type: String, required: true },
   category: { type: String },
-  inventory: { type: Number, default: 0 },
-  invUnit: { type: String },
-  avgCost: { type: Number },
+  inventory: { type: Number, default: 0, required: true },
+  invUnit: { type: String, required: true },
+  avgCost: { type: Number, required: true },
   note: { type: String },
   shelfLife: { type: Number },
   slUnit: { type: String },
@@ -38,12 +38,8 @@ updateRelatedRecipes = async (ingredientId, userId) => {
       recipe.cost = newCost
       await recipe.save();
 
-      const costHistory = await recipeCostHistory.create({
-        userId,
-        recipeId: recipe._id,
-        cost: newCost,
-        date: '2024-01-10'
-      })
+      const costHistory = await createRecipeCostHistory(userId, recipe._id, newCost, '2024-01-11')
+
     }));
 
   } catch (error) {

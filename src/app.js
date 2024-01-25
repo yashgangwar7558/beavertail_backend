@@ -13,6 +13,9 @@ const invoiceRouter = require('./routers/invoice');
 const processBillRouter = require('./routers/processBill');
 const salesRouter = require('./routers/sales');
 const salesHistoryRouter = require('./routers/salesHistory');
+// const recipeCostHistoryRouter = require('./routers/recipeCostHistory');
+// const ingredientCostHistoryRouter = require('./routers/ingredientCostHistory');
+// const modifierCostHistoryRouter = require('./routers/modifierCostHistory');
 
 const app = express();
 const port = process.env.PORT;
@@ -45,6 +48,9 @@ connectToMongoDB()
         app.use(processBillRouter)
         app.use(salesRouter)
         app.use(salesHistoryRouter)
+        // app.use(recipeCostHistoryRouter)
+        // app.use(ingredientCostHistoryRouter)
+        // app.use(modifierCostHistoryRouter)
 
         app.get('/', async (req, res) => {
             res.status(200).send("Server is live!")

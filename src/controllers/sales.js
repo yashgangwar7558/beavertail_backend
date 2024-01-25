@@ -1,11 +1,41 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const Recipe = require('../models/recipeBook');
-const Ingredient = require('../models/ingredients');
 const Sales = require('../models/sales');
-const salesHistory = require('../models/salesHistory');
 const {formatDate} = require('../controllers/helper');
 const { log } = require('console');
+
+exports.createBill = async (userId, billNumber, customerName, billingDate, itemsOrdered, total) => {
+    try {
+        const result = await Sales.create({
+            userId,
+            billNumber,
+            customerName,
+            billingDate,
+            itemsOrdered,
+            total
+        })
+        return result
+    } catch (err) {
+        console.log('Error creating bill:', err.message);
+        throw err
+    }
+}
+
+exports.getBillsBetweenDates = async (userId, startDate, endDate) => {
+    try {
+        const result = await Sales.find({
+            userId: userId,
+            billingDate: {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate),
+            },
+        })
+        return result
+    } catch(err) {
+        console.error('Error fetching bills between dates:', err.message);
+        throw err
+    }
+}
 
 exports.getBillInfo = async (req, res) => {
     try {

@@ -1,21 +1,33 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
 const Recipe = require('../models/recipeBook');
-const Ingredient = require('../models/ingredients');
-const Sales = require('../models/sales');
 const salesHistory = require('../models/salesHistory');
-const recipeCostHistory = require('../models/recipeCostHistory');
-const { findAverageCostForRecipeInDateRange } = require('../controllers/recipeBook')
+const { getBillsBetweenDates } = require('../controllers/sales')
+const { findAverageCostForRecipeInDateRange } = require('../controllers/recipeCostHistory')
 const { formatDate } = require('../controllers/helper');
-const { log } = require('console');
-const { start } = require('repl');
+
+exports.createSalesHistory = async (userId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, total) => {
+    try {
+        const result = await salesHistory.create({
+            userId,
+            recipeId,
+            recipeName,
+            billingId,
+            billNumber,
+            quantity,
+            menuPrice,
+            total,
+        })
+        return result
+    } catch (err) {
+        console.log('Error creating sales history:', err.message);
+        throw err
+    }
+}
 
 exports.getRecipeSalesInfo = async (req, res) => {
     try {
         const { userId, startDate, endDate } = req.body
-
-        // const startDate = new Date('2024-01-08');
-        // const endDate = new Date('2024-01-09');
 
         // Recipe wise sales data 
         const recipesData = await Recipe.find({ userId: userId });
@@ -36,13 +48,7 @@ exports.getRecipeSalesInfo = async (req, res) => {
                 },
             ]);
         } else {
-            const billingIds = await Sales.find({
-                userId: userId,
-                billingDate: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate),
-                },
-            }).select('_id');
+            const billingIds = await getBillsBetweenDates(userId, startDate, endDate)
             const extractedIds = billingIds.map(obj => obj._id);
             recipesSales = await salesHistory.aggregate([
                 {
@@ -134,7 +140,6 @@ exports.getRecipeSalesInfo = async (req, res) => {
         }));
 
         res.json({ success: true, allTypesSalesDataArray, allRecipesSalesData });
-        // res.json({ success: true, extractedIds, recipesSales });
     } catch (error) {
         console.error('Error fetching sales history:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
