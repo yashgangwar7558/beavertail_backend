@@ -19,7 +19,7 @@ const recipeSchema = new mongoose.Schema({
   name: { type: String, required: true },
   category: { type: String, required: true },
   yields: [yieldsSchema],
-  photo: {name: String, img: {data: Buffer, contentType: String}}, 
+  imageUrl: { type: String, required: true },
   methodPrep: { type: String },
   ingredients: [recipeIngredientSchema],
   cost: { type: Number },

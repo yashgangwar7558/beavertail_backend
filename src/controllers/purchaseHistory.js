@@ -13,7 +13,7 @@ exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredien
             invoiceId,
             invoiceNumber,
             quantity,
-            unit,
+            unit,   
             unitPrice,
             total
         })

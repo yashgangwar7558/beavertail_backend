@@ -7,7 +7,7 @@ exports.createRecipeCostHistory = async (userId, recipeId, cost, date) => {
             userId,
             recipeId,
             cost,
-            date
+            date: date.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')
         })
         return result
     } catch (err) {
@@ -30,6 +30,27 @@ exports.findAverageCostForRecipeInDateRange = async (recipeId, startDate, endDat
                     },
                 },
             });
+
+            pipeline.push({
+                $count: 'documentCount',
+            });
+
+            const countResult = await recipeCostHistory.aggregate(pipeline);
+
+            if (countResult.length === 0 || countResult[0].documentCount === 0) {
+                pipeline.pop();
+                pipeline.pop();
+                pipeline.push({
+                    $match: {
+                        recipeId: new mongoose.Types.ObjectId(recipeId),
+                        date: {
+                            $lte: new Date(endDate),
+                        },
+                    },
+                });
+            } else {
+                pipeline.pop();
+            }
         } else {
             pipeline.push({
                 $match: {
@@ -53,7 +74,7 @@ exports.findAverageCostForRecipeInDateRange = async (recipeId, startDate, endDat
             return 0;
         }
     } catch (error) {
-        console.error('Error finding average cost:', error.message);
+        console.error('Error finding average recipe cost:', error.message);
         throw error;
     }
 };

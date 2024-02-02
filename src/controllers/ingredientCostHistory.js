@@ -8,7 +8,7 @@ exports.createIngredientCostHistory = async (userId, ingredientId, cost, unit, d
             ingredientId,
             cost,
             unit,
-            date
+            date: date.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')
         })
         return result
     } catch (err) {

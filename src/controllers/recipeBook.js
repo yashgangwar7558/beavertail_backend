@@ -7,6 +7,7 @@ const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
 const { createRecipeCostHistory } = require('../controllers/recipeCostHistory');
 const { createModifierCostHistory } = require('../controllers/modifierCostHistory');
+const { uploadToS3, deleteFromS3 } = require('../controllers/helper');
 
 exports.createRecipe = async (req, res) => {
     try {
@@ -32,22 +33,18 @@ exports.createRecipe = async (req, res) => {
 
         if (req.file) {
             const { buffer } = req.file;
-            const photoName = `${name}_${Date.now()}`;
-
-            const photo = {
-                name: photoName,
-                img: {
-                    data: buffer.toString('base64'),
-                    contentType: req.file.mimetype,
-                },
-            };
+            const fileName = `${name}_${Date.now()}`
+            const fileType = req.file.mimetype
+            const bucketName = 'beavertail-7558'
+            const folderPath = 'recipes'
+            const imageUrl = await uploadToS3(buffer, fileName, fileType, bucketName, folderPath)
 
             const recipe = await Recipe.create({
                 userId,
                 name,
                 category,
                 yields,
-                photo,
+                imageUrl,
                 methodPrep,
                 ingredients,
                 cost,
@@ -75,11 +72,11 @@ exports.createRecipe = async (req, res) => {
 
 exports.updateRecipe = async (req, res) => {
     try {
-        const { recipeId, userId, name, category, methodPrep, modifierCost, menuPrice, menuType } = req.body;
+        const { recipeId, imageUrl, userId, name, category, methodPrep, modifierCost, menuPrice, menuType } = req.body;
         const ingredients = JSON.parse(req.body.ingredients)
         const yields = JSON.parse(req.body.yields)
 
-        if (!recipeId || !userId || !name || !category || !yields || !methodPrep || !ingredients || !modifierCost || !menuPrice || !menuType) {
+        if (!recipeId || !imageUrl || !userId || !name || !category || !yields || !methodPrep || !ingredients || !modifierCost || !menuPrice || !menuType) {
             return res.json({
                 success: false,
                 message: 'Some fields are missing!',
@@ -105,25 +102,22 @@ exports.updateRecipe = async (req, res) => {
         if (modifierCostBeforeUpdate !== modifierCostAfterUpdate) {
             const modifierCostHistory = await createModifierCostHistory(userId, recipeId, modifierCost, new Date())
         }
-        
+
         if (req.file) {
             const { buffer } = req.file;
-            const photoName = `${name}_${Date.now()}`;
-
-            const photo = {
-                name: photoName,
-                img: {
-                    data: buffer.toString('base64'),
-                    contentType: req.file.mimetype,
-                },
-            };
+            const fileName = `${name}_${Date.now()}`
+            const fileType = req.file.mimetype
+            const bucketName = 'beavertail-7558'
+            const folderPath = 'recipes'
+            await deleteFromS3(imageUrl, bucketName)
+            const newimageUrl = await uploadToS3(buffer, fileName, fileType, bucketName, folderPath)
 
             const updatedRecipe = await Recipe.findByIdAndUpdate(recipeId, {
                 userId,
                 name,
                 category,
                 yields,
-                photo,
+                imageUrl: newimageUrl,
                 methodPrep,
                 ingredients,
                 cost,
@@ -141,6 +135,7 @@ exports.updateRecipe = async (req, res) => {
                 name,
                 category,
                 yields,
+                imageUrl,
                 methodPrep,
                 ingredients,
                 cost,
@@ -234,7 +229,19 @@ exports.deleteRecipe = async (req, res) => {
             });
         }
 
+        const recipe = await Recipe.findById(recipeId);
+        if (!recipe) {
+            return res.json({
+                success: false,
+                message: 'Recipe not found!',
+            });
+        }
+
+        const imageUrl = recipe.imageUrl; 
+        const bucketName = 'beavertail-invoices-7558'
+
         const result = await Recipe.deleteOne({ _id: recipeId });
+        await deleteFromS3(imageUrl, bucketName)
 
         res.json({ success: true, message: 'Recipe deleted!' });
     } catch (error) {

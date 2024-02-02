@@ -11,9 +11,9 @@ const { uploadToS3 } = require('../controllers/helper');
 exports.processInvoice = async (req, res) => {
     try {
         const { userId } = req.body;
-        const invoiceNumber = "INV-324";
-        const vendor = "Sysco";
-        const invoiceDate = "2024-01-12";
+        const invoiceNumber = "INV-958";
+        const vendor = "Walmart";
+        const invoiceDate = "2024-02-01";
         const ingredients = [
             { name: "Salt", quantity: 2, unit: "kg", unitPrice: 150, total: "300" },
             { name: "Chicken", quantity: 2, unit: "lbs", unitPrice: 450, total: "900" },
@@ -21,7 +21,7 @@ exports.processInvoice = async (req, res) => {
         ];
         const payment = "Bill Pay";
         const status = "Pending";
-        const total = "940";
+        const total = "860";
 
         const AllIngredients = await Ingredient.find({ userId });
         const UnitMaps = await unitMapping.find({ userId });
@@ -33,8 +33,9 @@ exports.processInvoice = async (req, res) => {
                 const { buffer } = file;
                 const fileName = `${invoiceNumber}_${Date.now()}`;
                 const fileType = file.mimetype
-                const bucketName = 'beavertail-invoices-7558';
-                // const invoiceUrl = await uploadToS3(buffer, fileName, fileType, bucketName);
+                const bucketName = 'beavertail-7558';
+                const folderPath = 'invoices'
+                const invoiceUrl = await uploadToS3(buffer, fileName, fileType, bucketName, folderPath);
                 const createdInvoice = await createInvoice(
                     userId,
                     invoiceNumber,
@@ -44,7 +45,7 @@ exports.processInvoice = async (req, res) => {
                     payment,
                     status,
                     total,
-                    // invoiceUrl,
+                    invoiceUrl,
                 )
 
                 // Process 2 - Ingredients cost/inventory Update
@@ -72,7 +73,7 @@ exports.processInvoice = async (req, res) => {
                         const newInventoryQty = (convertedPrevQty + convertedNewQty) / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
 
                         const updateIngredient = await updateIngredientCostInventory(matchingIngredient._id, newAvgCost, newInventoryQty)
-                        const costHistory = await createIngredientCostHistory(userId, matchingIngredient._id, newAvgCost, matchingIngredient.invUnit, invoiceDate)
+                        const costHistory = await createIngredientCostHistory(userId, matchingIngredient._id, newAvgCost, matchingIngredient.invUnit, new Date(invoiceDate))
 
                     } else {
                         const newIngredient = await createIngredient(
@@ -83,7 +84,7 @@ exports.processInvoice = async (req, res) => {
                             ingredient.unitPrice,
                         );
 
-                        const costHistory = await createIngredientCostHistory(userId, newIngredient._id, ingredient.unitPrice, ingredient.unit, invoiceDate)
+                        const costHistory = await createIngredientCostHistory(userId, newIngredient._id, ingredient.unitPrice, ingredient.unit, new Date(invoiceDate))
                     }
                 }
 

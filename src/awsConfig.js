@@ -15,7 +15,7 @@ module.exports = AWS;
 //             "Effect": "Allow",
 //             "Principal": "*",
 //             "Action": "s3:GetObject",
-//             "Resource": "arn:aws:s3:::beavertail-invoices-7558/*"
+//             "Resource": "arn:aws:s3:::beavertail-7558/*"
 //         }
 //     ]
 // }

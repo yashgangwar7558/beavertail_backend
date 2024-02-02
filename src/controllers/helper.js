@@ -9,6 +9,17 @@ exports.formatDate = (date) => {
     return `${day}-${month}-${year}`;
 };
 
+exports.formatMonthYear = (date) => {
+    const options = { month: 'short', year: 'numeric' };
+    const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date);
+    const [month, year] = formattedDate.split(' ');
+    const lastTwoDigitsOfYear = year.slice(-2);
+
+    const formattedResult = `${month}-${lastTwoDigitsOfYear}`;
+
+    return formattedResult;
+}
+
 exports.inventoryCheck = async (ingredients, AllIngredients, UnitMaps) => {
     const allIngredientsPresent = await Promise.all(ingredients.map(async (ingredient) => {
 
@@ -25,8 +36,8 @@ exports.inventoryCheck = async (ingredients, AllIngredients, UnitMaps) => {
         );
 
         const toUnit = unitMap ? unitMap.toUnit : ingredient.unit;
-        const convertedQuantity = ingredient.quantity * getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
-        const convertedInventory = matchingIngredient.inventory * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+        const convertedQuantity = ingredient.quantity * exports.getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
+        const convertedInventory = matchingIngredient.inventory * exports.getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
 
         if (convertedQuantity > convertedInventory) {
             return false;
@@ -50,8 +61,8 @@ exports.costEstimation = async (ingredients, AllIngredients, UnitMaps) => {
                 (unitMap) => unitMap.ingredient_id.toString() === ingredient.ingredient_id.toString()
             );
             const toUnit = unitMap ? unitMap.toUnit : ingredient.unit;
-            const convertedQuantity = ingredient.quantity * getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
-            const costPerUnit = matchingIngredient.avgCost / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit) || 0;
+            const convertedQuantity = ingredient.quantity * exports.getConversionFactor(ingredient.unit, toUnit, unitMap.fromUnit);
+            const costPerUnit = matchingIngredient.avgCost / exports.getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit) || 0;
             totalCost += costPerUnit * convertedQuantity;
         }
     }
@@ -59,16 +70,21 @@ exports.costEstimation = async (ingredients, AllIngredients, UnitMaps) => {
     return totalCost;
 }
 
-getConversionFactor = (fromUnit, toUnit, fromUnitArray) => {
+exports.getConversionFactor = (fromUnit, toUnit, fromUnitArray) => {
     const conversionObject = fromUnitArray.find((unit) => unit.unit === fromUnit);
     return conversionObject ? conversionObject.conversion : 1;
 };
 
-exports.uploadToS3 = async (fileBuffer, fileName, fileType, bucketName) => {
+exports.uploadToS3 = async (fileBuffer, fileName, fileType, bucketName, folderPath) => {
     try {
+
+        if (folderPath && !folderPath.endsWith('/')) {
+            folderPath += '/';
+        }
+
         const params = {
             Bucket: bucketName,
-            Key: fileName,
+            Key: folderPath + fileName,
             Body: fileBuffer,
             ContentType: fileType, 
             ContentDisposition: 'inline',
@@ -83,3 +99,22 @@ exports.uploadToS3 = async (fileBuffer, fileName, fileType, bucketName) => {
         throw error;
     }
 };
+
+exports.deleteFromS3 = async (objectUrl, bucketName) => {
+    try {
+        const objectKey = new URL(objectUrl).pathname.substr(1);
+        const decodedObjectKey = decodeURIComponent(objectKey);
+
+        const params = {
+            Bucket: bucketName,
+            Key: decodedObjectKey,
+        };
+
+        await s3.deleteObject(params).promise();
+
+        console.log(`File deleted successfully: ${decodedObjectKey}`);
+    } catch (error) {
+        console.error('Error deleting file from S3:', error.message);
+        throw error;
+    }
+}

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
 const Sales = require('../models/sales');
-const {formatDate} = require('../controllers/helper');
+const { formatDate } = require('../controllers/helper');
 const { log } = require('console');
 
 exports.createBill = async (userId, billNumber, customerName, billingDate, itemsOrdered, total) => {
@@ -31,9 +31,33 @@ exports.getBillsBetweenDates = async (userId, startDate, endDate) => {
             },
         })
         return result
-    } catch(err) {
+    } catch (err) {
         console.error('Error fetching bills between dates:', err.message);
         throw err
+    }
+}
+
+exports.getBillsCountBetweenDates = async (req, res) => {
+    try {
+
+        // const { userId, startDate, endDate } = req.body
+
+        const userId = '65748c9cab797c53ecb7f3ac'
+        const currentDate = new Date();
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+
+        const countBills  = await Sales.countDocuments({
+            userId: userId,
+            billingDate: {
+                $gte: new Date(startDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                $lte: new Date(endDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+            },
+        })
+        res.json({ success: true, countBills });
+    } catch (err) {
+        console.error('Error fetching bills count:', err.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
 
@@ -87,3 +111,284 @@ exports.getAllBills = async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
+// exports.currentDaySale = async (req, res) => {
+//     try {
+//         const currentDate = new Date();
+//         const startOfDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+//         const endOfDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+
+//         const totalSales = await Sales.aggregate([
+//             {
+//                 $match: {
+//                     billingDate: {
+//                         $gte: startOfDay,
+//                         $lt: endOfDay,
+//                     },
+//                 },
+//             },
+//             {
+//                 $group: {
+//                     _id: null,
+//                     totalSales: { $sum: { $toDouble: '$total' } },
+//                 },
+//             },
+//         ]);
+
+//         res.json({ success: true, totalSales: totalSales.length > 0 ? totalSales[0].totalSales : 0 });
+//     } catch (error) {
+//         console.error('Error calculating total sales for current date:', error.message);
+//         res.status(500).json({ success: false, message: 'Internal Server Error' });
+//     }
+// }
+
+// exports.currentMonthSale = async (req, res) => {
+//     try {
+//         const currentDate = new Date();
+//         const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+//         const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+//         const totalSales = await Sales.aggregate([
+//             {
+//                 $match: {
+//                     billingDate: {
+//                         $gte: startOfMonth,
+//                         $lt: endOfMonth,
+//                     },
+//                 },
+//             },
+//             {
+//                 $group: {
+//                     _id: null,
+//                     totalSales: { $sum: { $toDouble: '$total' } },
+//                 },
+//             },
+//         ]);
+
+//         res.json({ success: true, totalSales: totalSales.length > 0 ? totalSales[0].totalSales : 0 });
+//     } catch (error) {
+//         console.error('Error calculating total sales for current month:', error.message);
+//         res.status(500).json({ success: false, message: 'Internal Server Error' });
+//     }
+// }
+
+// exports.currentYearSale = async (req, res) => {
+//     try {
+//         const currentDate = new Date();
+//         const startOfCurrentYear = new Date(currentDate.getFullYear(), 0, 1);
+//         const endOfCurrentYear = new Date(currentDate.getFullYear() + 1, 0, 0);
+
+//         const totalSales = await Sales.aggregate([
+//             {
+//                 $match: {
+//                     billingDate: {
+//                         $gte: startOfCurrentYear,
+//                         $lt: endOfCurrentYear,
+//                     },
+//                 },
+//             },
+//             {
+//                 $group: {
+//                     _id: null,
+//                     totalSales: { $sum: { $toDouble: '$total' } },
+//                 },
+//             },
+//         ]);
+
+//         res.json({ success: true, totalSales: totalSales.length > 0 ? totalSales[0].totalSales : 0 });
+//     } catch (error) {
+//         console.error('Error calculating total sales for the current year:', error.message);
+//         res.status(500).json({ success: false, message: 'Internal Server Error' });
+//     }
+// }
+
+// exports.pastOneYearMonthWiseSale = async (req, res) => {
+//     try {
+//         const currentDate = new Date();
+//         const startOfPastYear = new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1);
+//         const endOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+//         const totalSales = await Sales.aggregate([
+//             {
+//                 $match: {
+//                     billingDate: {
+//                         $gte: startOfPastYear,
+//                         $lt: endOfCurrentMonth,
+//                     },
+//                 },
+//             },
+//             {
+//                 $group: {
+//                     _id: {
+//                         month: { $month: '$billingDate' },
+//                         year: { $year: '$billingDate' },
+//                     },
+//                     totalSales: { $sum: { $toDouble: '$total' } },
+//                 },
+//             },
+//             {
+//                 $sort: {
+//                     '_id.year': 1,
+//                     '_id.month': 1,
+//                 },
+//             },
+//             {
+//                 $project: {
+//                     _id: 0,
+//                     x: {
+//                         $concat: [
+//                             {
+//                                 $switch: {
+//                                     branches: [
+//                                         { case: { $eq: ['$_id.month', 1] }, then: 'Jan' },
+//                                         { case: { $eq: ['$_id.month', 2] }, then: 'Feb' },
+//                                         { case: { $eq: ['$_id.month', 3] }, then: 'Mar' },
+//                                         { case: { $eq: ['$_id.month', 4] }, then: 'Apr' },
+//                                         { case: { $eq: ['$_id.month', 5] }, then: 'May' },
+//                                         { case: { $eq: ['$_id.month', 6] }, then: 'Jun' },
+//                                         { case: { $eq: ['$_id.month', 7] }, then: 'Jul' },
+//                                         { case: { $eq: ['$_id.month', 8] }, then: 'Aug' },
+//                                         { case: { $eq: ['$_id.month', 9] }, then: 'Sep' },
+//                                         { case: { $eq: ['$_id.month', 10] }, then: 'Oct' },
+//                                         { case: { $eq: ['$_id.month', 11] }, then: 'Nov' },
+//                                         { case: { $eq: ['$_id.month', 12] }, then: 'Dec' },
+//                                     ],
+//                                     default: '',
+//                                 },
+//                             },
+//                             '-',
+//                             { $substr: ['$_id.year', 2, 2] },
+//                         ],
+//                     },
+//                     y: '$totalSales',
+//                 },
+//             },
+//         ]);
+
+//         const monthsInRange = [];
+//         let currentMonth = new Date(startOfPastYear);
+//         while (currentMonth < endOfCurrentMonth) {
+//             const formattedMonth = `${currentMonth.toLocaleString('default', { month: 'short' })}-${currentMonth.getFullYear().toString().slice(2)}`;
+//             monthsInRange.push(formattedMonth);
+//             currentMonth.setMonth(currentMonth.getMonth() + 1);
+//         }
+
+//         const salesMap = new Map(totalSales.map(item => [item.x, item.y]));
+//         const filledSales = monthsInRange.map(month => ({ x: month, y: salesMap.get(month) || 0 }));
+
+//         res.json({ success: true, filledSales });
+//     } catch (error) {
+//         console.error('Error calculating total sales for the past year:', error.message);
+//         res.status(500).json({ success: false, message: 'Internal Server Error' });
+//     }
+// }
+
+exports.totalSalesBetweenDates = async (req, res) => {
+    try {
+        const { userId, startDate, endDate } = req.body
+
+        const totalSales = await Sales.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(userId),
+                    billingDate: {
+                        $gte: new Date(startDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $lte: new Date(endDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalSales: { $sum: { $toDouble: '$total' } },
+                },
+            },
+        ]);
+
+        res.json({ success: true, totalSales: totalSales.length > 0 ? totalSales[0].totalSales : 0 });
+    } catch (error) {
+        console.error('Error calculating total sales between given duration:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.monthWiseSalesBetweenDates = async (req, res) => {
+    try {
+        const { userId, startDate, endDate } = req.body
+
+        const totalSales = await Sales.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(userId),
+                    billingDate: {
+                        $gte: new Date(startDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $lte: new Date(endDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        month: { $month: '$billingDate' },
+                        year: { $year: '$billingDate' },
+                    },
+                    totalSales: { $sum: { $toDouble: '$total' } },
+                },
+            },
+            {
+                $sort: {
+                    '_id.year': 1,
+                    '_id.month': 1,
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    x: {
+                        $concat: [
+                            {
+                                $switch: {
+                                    branches: [
+                                        { case: { $eq: ['$_id.month', 1] }, then: 'Jan' },
+                                        { case: { $eq: ['$_id.month', 2] }, then: 'Feb' },
+                                        { case: { $eq: ['$_id.month', 3] }, then: 'Mar' },
+                                        { case: { $eq: ['$_id.month', 4] }, then: 'Apr' },
+                                        { case: { $eq: ['$_id.month', 5] }, then: 'May' },
+                                        { case: { $eq: ['$_id.month', 6] }, then: 'Jun' },
+                                        { case: { $eq: ['$_id.month', 7] }, then: 'Jul' },
+                                        { case: { $eq: ['$_id.month', 8] }, then: 'Aug' },
+                                        { case: { $eq: ['$_id.month', 9] }, then: 'Sep' },
+                                        { case: { $eq: ['$_id.month', 10] }, then: 'Oct' },
+                                        { case: { $eq: ['$_id.month', 11] }, then: 'Nov' },
+                                        { case: { $eq: ['$_id.month', 12] }, then: 'Dec' },
+                                    ],
+                                    default: '',
+                                },
+                            },
+                            '-',
+                            { $substr: ['$_id.year', 2, 2] },
+                        ],
+                    },
+                    y: '$totalSales',
+                },
+            },
+        ]);
+
+        const monthsInRange = [];
+        let currentMonth = new Date(startOfPastYear);
+        while (currentMonth < endOfCurrentMonth) {
+            const formattedMonth = `${currentMonth.toLocaleString('default', { month: 'short' })}-${currentMonth.getFullYear().toString().slice(2)}`;
+            monthsInRange.push(formattedMonth);
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+        }
+
+        const salesMap = new Map(totalSales.map(item => [item.x, item.y]));
+        const filledSales = monthsInRange.map(month => ({ x: month, y: salesMap.get(month) || 0 }));
+
+        res.json({ success: true, totalSales: filledSales });
+    } catch (error) {
+        console.error('Error calculating month wise sales for given period:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+

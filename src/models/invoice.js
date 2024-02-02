@@ -18,7 +18,7 @@ const invoiceSchema = new mongoose.Schema({
     payment: { type: String },
     status: { type: String, default: 'Pending' },
     total: { type: String, required: true },
-    // invoiceUrl: { type: String, required: true },
+    invoiceUrl: { type: String, required: true },
 });
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);

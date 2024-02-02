@@ -38,7 +38,7 @@ updateRelatedRecipes = async (ingredientId, userId) => {
       recipe.cost = newCost
       await recipe.save();
 
-      const costHistory = await createRecipeCostHistory(userId, recipe._id, newCost, '2024-01-11')
+      const costHistory = await createRecipeCostHistory(userId, recipe._id, newCost, new Date('2024-01-11'))
 
     }));
 

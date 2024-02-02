@@ -3,8 +3,10 @@ const User = require('../models/user');
 const Recipe = require('../models/recipeBook');
 const salesHistory = require('../models/salesHistory');
 const { getBillsBetweenDates } = require('../controllers/sales')
+const { getAllTypes } = require('../controllers/types')
 const { findAverageCostForRecipeInDateRange } = require('../controllers/recipeCostHistory')
-const { formatDate } = require('../controllers/helper');
+const { findAverageModifierCostForRecipeInDateRange } = require('../controllers/modifierCostHistory')
+const { formatDate, formatMonthYear } = require('../controllers/helper');
 
 exports.createSalesHistory = async (userId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, total) => {
     try {
@@ -25,11 +27,8 @@ exports.createSalesHistory = async (userId, recipeId, recipeName, billingId, bil
     }
 }
 
-exports.getRecipeSalesInfo = async (req, res) => {
+exports.recipeWiseSalesDataBetweenDates = async (userId, startDate, endDate) => {
     try {
-        const { userId, startDate, endDate } = req.body
-
-        // Recipe wise sales data 
         const recipesData = await Recipe.find({ userId: userId });
         let recipesSales = [];
         if (!startDate || !endDate) {
@@ -67,103 +66,329 @@ exports.getRecipeSalesInfo = async (req, res) => {
             ]);
         }
 
-        const allRecipesSalesData = [];
-        for (const recipeSales of recipesSales) {
-            const matchingRecipe = recipesData.find(
-                (recipeData) => recipeData._id.toString() === recipeSales._id.toString()
+        const recipesSalesData = [];
+        for (const recipeData of recipesData) {
+            const matchingRecipe = recipesSales.find(
+                (recipeSales) => recipeData._id.toString() === recipeSales._id.toString()
             );
 
-            const avgCost = await findAverageCostForRecipeInDateRange(matchingRecipe._id, startDate, endDate);
+            const avgCost = await findAverageCostForRecipeInDateRange(recipeData._id, startDate, endDate);
+            const avgModifierCost = await findAverageModifierCostForRecipeInDateRange(recipeData._id, startDate, endDate);
 
-            const recipeSalesData = {
-                recipeId: matchingRecipe._id,
-                name: matchingRecipe.name,
-                type: matchingRecipe.category,
-                avgCost: avgCost,
-                modifierCost: matchingRecipe.modifierCost,
-                quantitySold: recipeSales.quantitySold,
-                totalFoodCost: recipeSales.quantitySold * avgCost,
-                totalModifierCost: recipeSales.quantitySold * matchingRecipe.modifierCost,
-                totalSales: recipeSales.totalSales,
-                totalRevenueWomc: recipeSales.totalSales - (recipeSales.quantitySold * avgCost),
-                totalRevenueWmc: recipeSales.totalSales - (recipeSales.quantitySold * avgCost + recipeSales.quantitySold * matchingRecipe.modifierCost),
-                theoreticalCostWomc: ((recipeSales.quantitySold * avgCost) / recipeSales.totalSales) * 100,
-                theoreticalCostWmc: (((recipeSales.totalSales - (recipeSales.quantitySold * avgCost) + (recipeSales.quantitySold * matchingRecipe.modifierCost))) / recipeSales.totalSales) * 100
-            }
-
-            allRecipesSalesData.push(recipeSalesData);;
-        }
-
-        // Type wise sales data
-        const allTypesSalesData = allRecipesSalesData.reduce((acc, recipe) => {
-            const { type, avgCost, quantitySold, totalFoodCost, totalModifierCost, totalSales, totalRevenueWomc, totalRevenueWmc, theoreticalCostWomc, theoreticalCostWmc } = recipe;
-
-            if (!acc[type]) {
-                acc[type] = {
-                    count: 0,
-                    avgCost: 0,
-                    itemsSold: 0,
+            if (matchingRecipe) {
+                const recipeSalesData = {
+                    recipeId: recipeData._id,
+                    name: recipeData.name,
+                    type: recipeData.category,
+                    imageUrl: recipeData.imageUrl,
+                    avgCost: avgCost,
+                    modifierCost: avgModifierCost,
+                    quantitySold: matchingRecipe.quantitySold,
+                    totalFoodCost: matchingRecipe.quantitySold * avgCost,
+                    totalModifierCost: matchingRecipe.quantitySold * avgModifierCost,
+                    totalSales: matchingRecipe.totalSales,
+                    totalProfitWomc: matchingRecipe.totalSales - (matchingRecipe.quantitySold * avgCost),
+                    totalProfitWmc: matchingRecipe.totalSales - (matchingRecipe.quantitySold * avgCost + matchingRecipe.quantitySold * avgModifierCost),
+                    theoreticalCostWomc: ((matchingRecipe.quantitySold * avgCost) / matchingRecipe.totalSales) * 100,
+                    theoreticalCostWmc: (((matchingRecipe.totalSales - (matchingRecipe.quantitySold * avgCost) + (matchingRecipe.quantitySold * avgModifierCost))) / matchingRecipe.totalSales) * 100
+                }
+                recipesSalesData.push(recipeSalesData);
+            } else {
+                const recipeSalesData = {
+                    recipeId: recipeData._id,
+                    name: recipeData.name,
+                    type: recipeData.category,
+                    imageUrl: recipeData.imageUrl,
+                    avgCost: avgCost,
+                    modifierCost: avgModifierCost,
+                    quantitySold: 0,
                     totalFoodCost: 0,
                     totalModifierCost: 0,
                     totalSales: 0,
-                    totalRevenueWomc: 0,
-                    totalRevenueWmc: 0,
+                    totalProfitWomc: 0,
+                    totalProfitWmc: 0,
                     theoreticalCostWomc: 0,
                     theoreticalCostWmc: 0
-                };
+                }
+                recipesSalesData.push(recipeSalesData);
+            }
+        }
+
+        return recipesSalesData;
+    } catch (error) {
+        console.error('Error fetching recipe wise sales info between dates:', error.message);
+        throw error
+    }
+}
+
+exports.typeWiseSalesDataBetweenDates = async (userId, startDate, endDate) => {
+    try {
+        // Recipe wise sales data 
+        const allRecipesSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, startDate, endDate)
+        const recipeTypes = await getAllTypes(userId)
+
+        // Type wise sales data
+        const allTypesSalesData = recipeTypes.map((typeData) => {
+            const { type, _id, imageUrl } = typeData;
+            const typeRecipes = allRecipesSalesData.filter((recipe) => recipe.type === type);
+
+            const typeSalesData = {
+                type,
+                _id,
+                imageUrl,
+                count: 0,
+                avgCost: 0,
+                itemsSold: 0,
+                totalFoodCost: 0,
+                totalModifierCost: 0,
+                totalSales: 0,
+                totalProfitWomc: 0,
+                totalProfitWmc: 0,
+                theoreticalCostWomc: 0,
+                theoreticalCostWmc: 0
+            };
+
+            typeRecipes.forEach((recipe) => {
+                typeSalesData.count++;
+                typeSalesData.avgCost += recipe.avgCost;
+                typeSalesData.itemsSold += recipe.quantitySold;
+                typeSalesData.totalFoodCost += recipe.totalFoodCost;
+                typeSalesData.totalModifierCost += recipe.totalModifierCost;
+                typeSalesData.totalSales += recipe.totalSales;
+                typeSalesData.totalProfitWomc += recipe.totalProfitWomc;
+                typeSalesData.totalProfitWmc += recipe.totalProfitWmc;
+                typeSalesData.theoreticalCostWomc += recipe.theoreticalCostWomc;
+                typeSalesData.theoreticalCostWmc += recipe.theoreticalCostWmc;
+            });
+
+            if (typeSalesData.count > 0) {
+                typeSalesData.avgCost /= typeSalesData.count;
+                typeSalesData.theoreticalCostWomc /= typeSalesData.count;
+                typeSalesData.theoreticalCostWmc /= typeSalesData.count;
             }
 
-            acc[type].count++;
-            acc[type].avgCost += avgCost;
-            acc[type].itemsSold += quantitySold;
-            acc[type].totalFoodCost += totalFoodCost;
-            acc[type].totalModifierCost += totalModifierCost;
-            acc[type].totalSales += totalSales;
-            acc[type].totalRevenueWomc += totalRevenueWomc;
-            acc[type].totalRevenueWmc += totalRevenueWmc;
-            acc[type].theoreticalCostWomc += theoreticalCostWomc;
-            acc[type].theoreticalCostWmc += theoreticalCostWmc;
-
-            return acc;
-        }, {});
-
-        Object.keys(allTypesSalesData).forEach((type) => {
-            const count = allTypesSalesData[type].count;
-            allTypesSalesData[type].avgCost /= count;
-            allTypesSalesData[type].theoreticalCostWomc /= count;
-            allTypesSalesData[type].theoreticalCostWmc /= count;
+            return typeSalesData;
         });
 
-        const allTypesSalesDataArray = Object.keys(allTypesSalesData).map((type) => ({
-            type,
-            ...allTypesSalesData[type]
-        }));
+        return allTypesSalesData;
 
-        res.json({ success: true, allTypesSalesDataArray, allRecipesSalesData });
     } catch (error) {
-        console.error('Error fetching sales history:', error.message);
+        console.error('Error fetching types wise sales info between dates:', error.message);
+        throw error
+    }
+}
+
+exports.typeWiseRecipeSalesDataBetweenDates = async (req, res) => {
+    try {
+
+        // const { userId, startDate, endDate } = req.body
+
+        const userId = '65748c9cab797c53ecb7f3ac'
+        const startDate = null;
+        const endDate = null;
+
+        const allRecipesSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, startDate, endDate);
+        const recipeTypes = await getAllTypes(userId)
+
+        // Organize data by type
+        const typeWiseSalesData = recipeTypes.map((typeData) => {
+            const { type, _id, imageUrl } = typeData;
+            const recipesOfType = allRecipesSalesData.filter((recipe) => recipe.type === type);
+
+            return {
+                type,
+                _id,
+                salesData: recipesOfType.map((recipe) => ({
+                    recipeId: recipe.recipeId,
+                    name: recipe.name,
+                    imageUrl: recipe.imageUrl,
+                    avgCost: recipe.avgCost,
+                    modifierCost: recipe.modifierCost,
+                    quantitySold: recipe.quantitySold,
+                    totalFoodCost: recipe.totalFoodCost,
+                    totalModifierCost: recipe.totalModifierCost,
+                    totalSales: recipe.totalSales,
+                    totalProfitWomc: recipe.totalProfitWomc,
+                    totalProfitWmc: recipe.totalProfitWmc,
+                    theoreticalCostWomc: recipe.theoreticalCostWomc,
+                    theoreticalCostWmc: recipe.theoreticalCostWmc,
+                })),
+            };
+        });
+
+        res.json({ success: true, typeWiseSalesData });
+    } catch (error) {
+        console.error('Error calculating type wise recipe sales data:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+exports.monthWiseRecipeSalesData = async (req, res) => {
+    try {
+        // const { userId, startDate, endDate } = req.body
+
+        const userId = '65748c9cab797c53ecb7f3ac'
+        const currentDate = new Date();
+        const startDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() + 1, 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+        const monthWiseSalesData = [];
+
+        while (startDate <= endDate) {
+            const monthStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            const monthEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+
+            const salesData = await exports.recipeWiseSalesDataBetweenDates(userId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
+            const monthyear = await formatMonthYear(monthStartDate)
+
+            monthWiseSalesData.push({
+                month: monthyear,
+                salesData: salesData,
+            });
+
+            startDate.setMonth(startDate.getMonth() + 1);
+        }
+
+        res.json({ success: true, monthWiseSalesData });
+    } catch (error) {
+        console.error('Error calculating month wise sales data:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
 
-exports.getSalesHistory = async (req, res) => {
+exports.monthWiseTypeSalesData = async (req, res) => {
     try {
-        const { userId } = req.body;
+        // const { userId, startDate, endDate } = req.body
 
-        const user = await User.findById(userId);
+        const userId = '65748c9cab797c53ecb7f3ac'
+        const currentDate = new Date();
+        const startDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() + 1, 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-        if (!user) {
-            return res.json({
-                success: false,
-                message: 'User not found!',
+        const monthWiseSalesData = [];
+
+        while (startDate <= endDate) {
+            const monthStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            const monthEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+
+            const salesData = await exports.typeWiseSalesDataBetweenDates(userId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
+            const monthyear = await formatMonthYear(monthStartDate)
+
+            monthWiseSalesData.push({
+                month: monthyear,
+                salesData: salesData,
             });
+
+            startDate.setMonth(startDate.getMonth() + 1);
         }
 
-        const history = await salesHistory.find({ userId: user._id });
-
-        res.json({ success: true, history });
+        res.json({ success: true, monthWiseSalesData });
     } catch (error) {
-        console.error('Error fetching sales history:', error.message);
+        console.error('Error calculating month wise sales data:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
-};
+}
+
+exports.itemsSoldBetweenDates = async (req, res) => {
+    try {
+        const { userId, startDate, endDate } = req.body
+
+        const billingIds = await getBillsBetweenDates(userId, startDate, endDate)
+        const extractedIds = billingIds.map(obj => obj._id);
+        const itemsSold = await salesHistory.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(userId),
+                    billingId: { $in: extractedIds }
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    quantity: { $sum: '$quantity' },
+                },
+            },
+        ]);
+
+        res.json({ success: true, itemsSold: itemsSold.length > 0 ? itemsSold[0].quantity : 0 });
+    } catch (error) {
+        console.error('Error calculating total items sold between given duration:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.salesExpenseProfitBetweenDates = async (req, res) => {
+    try {
+        const {userId, startDate, endDate} = req.body;
+
+        const recipeSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, startDate, endDate)
+
+        let totalSales = 0;
+        let totalExpense = 0;
+        let totalProfit = 0;
+
+        for (const recipeData of recipeSalesData) {
+            totalSales += recipeData.totalSales;
+            totalExpense += recipeData.totalFoodCost + recipeData.totalModifierCost;
+            totalProfit += recipeData.totalProfitWmc;
+        }
+
+        res.json({
+            success: true,
+            totalSales: totalSales.toFixed(2),
+            totalExpense: totalExpense.toFixed(2),
+            totalProfit: totalProfit.toFixed(2),
+        });
+
+    } catch (error) {
+        console.error('Error calculating total sales, expense and profit between given duration:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.monthWiseSalesExpenseProfit = async (req, res) => {
+    try {
+        // const { userId, startDate, endDate } = req.body
+
+        const userId = '65748c9cab797c53ecb7f3ac'
+        const currentDate = new Date();
+        const startDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() + 1, 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+        const monthWiseData = [];
+
+        while (startDate <= endDate) {
+            const monthStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            const monthEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+
+            const recipeSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
+            const monthyear = await formatMonthYear(monthStartDate)
+
+            let totalSales = 0;
+            let totalExpense = 0;
+            let totalProfit = 0;
+
+            for (const recipeData of recipeSalesData) {
+                totalSales += recipeData.totalSales;
+                totalExpense += recipeData.totalFoodCost + recipeData.totalModifierCost;
+                totalProfit += recipeData.totalProfitWmc;
+            }
+
+            monthWiseData.push({
+                month: monthyear,
+                totalSales: totalSales,
+                totalExpense: totalExpense,
+                totalProfit: totalProfit,
+            });
+
+            startDate.setMonth(startDate.getMonth() + 1);
+        }
+
+        res.json({ success: true, monthWiseData });
+    } catch (error) {
+        console.error('Error calculating month wise sales, expense and profit data:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+

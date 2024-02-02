@@ -14,7 +14,7 @@ exports.createInvoice = async (userId, invoiceNumber, vendor, invoiceDate, ingre
             payment,
             status,
             total,
-            // invoiceUrl,
+            invoiceUrl,
         })
         return result
     } catch (err) {

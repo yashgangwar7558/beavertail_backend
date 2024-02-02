@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const connectToMongoDB = require('./db/conn')
 const userRouter = require('./routers/user');
+const typesRouter = require('./routers/types');
 const recipesRouter = require('./routers/recipeBook');
 const ingredientsRouter = require('./routers/ingredients');
 const unitMapsRouter = require('./routers/unitmapping');
@@ -39,6 +40,7 @@ connectToMongoDB()
     .then(() => {
 
         app.use(userRouter)
+        app.use(typesRouter)
         app.use(recipesRouter)
         app.use(ingredientsRouter)
         app.use(unitMapsRouter)
