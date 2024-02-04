@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
 const purchaseHistory = require('../models/purchaseHistory');
+const Invoice = require('../models/invoice');
 const { formatDate } = require('../controllers/helper');
 const { log } = require('console');
 
@@ -13,7 +14,7 @@ exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredien
             invoiceId,
             invoiceNumber,
             quantity,
-            unit,   
+            unit,
             unitPrice,
             total
         })
@@ -26,14 +27,28 @@ exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredien
 
 exports.getIngredientWisePurchaseHistory = async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { userId, startDate, endDate } = req.body;
 
-        const ingPurchaseHistory = await purchaseHistory.find({ userId })
+        let query = { userId };
+
+        if (startDate && endDate) {
+            const invoices = await Invoice.find({
+                userId,
+                invoiceDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+            });
+            const invoiceIdsArray = invoices.map(invoice => invoice._id);
+            query = {
+                userId,
+                invoiceId: { $in: invoiceIdsArray },
+            }
+        }
+
+        const ingPurchaseHistory = await purchaseHistory.find(query)
             .populate('ingredientId', 'name')
             .populate({
                 path: 'invoiceId',
                 model: 'Invoice',
-                select: 'invoiceNumber vendor uploadDate',
+                select: 'invoiceNumber vendor invoiceDate',
             });
 
         const formattedData = ingPurchaseHistory.map(entry => ({
@@ -42,7 +57,7 @@ exports.getIngredientWisePurchaseHistory = async (req, res) => {
                 id: entry.invoiceId._id,
                 invoiceNumber: entry.invoiceId.invoiceNumber,
                 vendor: entry.invoiceId.vendor,
-                uploadDate: formatDate(entry.invoiceId.uploadDate),
+                invoiceDate: formatDate(entry.invoiceId.invoiceDate),
                 quantity: entry.quantity,
                 unit: entry.unit,
                 unitPrice: entry.unitPrice,
@@ -88,3 +103,44 @@ exports.getAllPurchaseHistory = async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
+exports.ingredientsTotalPurchaseBwDates = async (req, res) => {
+    try {
+        const { userId, startDate, endDate } = req.body;
+
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
+
+        const invoices = await Invoice.find({
+            userId,
+            invoiceDate: {
+                $gte: new Date(CstartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                $lte: new Date(CendDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+            },
+        });
+        const invoiceIdsArray = invoices.map(invoice => invoice._id);
+
+        const ingredientsTotal = await purchaseHistory.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(userId),
+                    invoiceId: { $in: invoiceIdsArray }
+                },
+            },
+            {
+              $group: {
+                _id: '$ingredientId',
+                ingredient: { $first: '$ingredientName' },
+                totalQuantity: { $sum: '$quantity' },
+                totalAmount: { $sum: { $toDouble: '$total' } },
+              },
+            },
+          ]);
+
+          res.json({ success: true, ingredientsTotal });
+    } catch (error) {
+        console.error('Error fetching ingredients total purchase:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+

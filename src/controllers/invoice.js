@@ -46,9 +46,9 @@ exports.getInvoice = async (req, res) => {
     }
 };
 
-exports.getAllInvoice = async (req, res) => {
+exports.getAllInvoiceBwDates = async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { userId, startDate, endDate } = req.body;
 
         const user = await User.findById(userId);
 
@@ -59,7 +59,13 @@ exports.getAllInvoice = async (req, res) => {
             });
         }
 
-        const invoices = await Invoice.find({ userId: user._id });
+        let query = { userId: user._id };
+
+        if (startDate && endDate) {
+            query.invoiceDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        }
+
+        const invoices = await Invoice.find(query);
 
         const formattedInvoices = invoices.map((invoice) => {
             return {
@@ -75,3 +81,42 @@ exports.getAllInvoice = async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
+exports.getVendorsTotalBwDates = async (req, res) => {
+    try {
+        const { userId, startDate, endDate } = req.body;
+
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
+
+        const vendorsTotal = await Invoice.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(userId),
+                    invoiceDate: {
+                        $gte: new Date(CstartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $lte: new Date(CendDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: '$vendor',
+                    totalAmount: { $sum: { $toDouble: '$total' } }
+                }
+            },
+            {
+                $project: {
+                    vendor: '$_id',
+                    totalAmount: 1,
+                    _id: 0
+                }
+            }
+        ]);
+
+        res.json({ success: true, vendorsTotal });
+    } catch (error) {
+        console.error('Error fetching vendors total:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}

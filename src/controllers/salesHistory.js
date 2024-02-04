@@ -181,11 +181,7 @@ exports.typeWiseSalesDataBetweenDates = async (userId, startDate, endDate) => {
 exports.typeWiseRecipeSalesDataBetweenDates = async (req, res) => {
     try {
 
-        // const { userId, startDate, endDate } = req.body
-
-        const userId = '65748c9cab797c53ecb7f3ac'
-        const startDate = null;
-        const endDate = null;
+        const { userId, startDate, endDate } = req.body
 
         const allRecipesSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, startDate, endDate);
         const recipeTypes = await getAllTypes(userId)
@@ -225,18 +221,16 @@ exports.typeWiseRecipeSalesDataBetweenDates = async (req, res) => {
 
 exports.monthWiseRecipeSalesData = async (req, res) => {
     try {
-        // const { userId, startDate, endDate } = req.body
+        const { userId, startDate, endDate } = req.body
 
-        const userId = '65748c9cab797c53ecb7f3ac'
-        const currentDate = new Date();
-        const startDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() + 1, 1);
-        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
 
         const monthWiseSalesData = [];
 
-        while (startDate <= endDate) {
-            const monthStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-            const monthEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        while (CstartDate <= CendDate) {
+            const monthStartDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth(), 1);
+            const monthEndDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth() + 1, 0);
 
             const salesData = await exports.recipeWiseSalesDataBetweenDates(userId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
             const monthyear = await formatMonthYear(monthStartDate)
@@ -246,7 +240,7 @@ exports.monthWiseRecipeSalesData = async (req, res) => {
                 salesData: salesData,
             });
 
-            startDate.setMonth(startDate.getMonth() + 1);
+            CstartDate.setMonth(CstartDate.getMonth() + 1);
         }
 
         res.json({ success: true, monthWiseSalesData });
@@ -258,18 +252,16 @@ exports.monthWiseRecipeSalesData = async (req, res) => {
 
 exports.monthWiseTypeSalesData = async (req, res) => {
     try {
-        // const { userId, startDate, endDate } = req.body
+        const { userId, startDate, endDate } = req.body
 
-        const userId = '65748c9cab797c53ecb7f3ac'
-        const currentDate = new Date();
-        const startDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() + 1, 1);
-        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
 
         const monthWiseSalesData = [];
 
-        while (startDate <= endDate) {
-            const monthStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-            const monthEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        while (CstartDate <= CendDate) {
+            const monthStartDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth(), 1);
+            const monthEndDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth() + 1, 0);
 
             const salesData = await exports.typeWiseSalesDataBetweenDates(userId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
             const monthyear = await formatMonthYear(monthStartDate)
@@ -279,7 +271,7 @@ exports.monthWiseTypeSalesData = async (req, res) => {
                 salesData: salesData,
             });
 
-            startDate.setMonth(startDate.getMonth() + 1);
+            CstartDate.setMonth(CstartDate.getMonth() + 1);
         }
 
         res.json({ success: true, monthWiseSalesData });
@@ -319,7 +311,7 @@ exports.itemsSoldBetweenDates = async (req, res) => {
 
 exports.salesExpenseProfitBetweenDates = async (req, res) => {
     try {
-        const {userId, startDate, endDate} = req.body;
+        const { userId, startDate, endDate } = req.body;
 
         const recipeSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, startDate, endDate)
 
@@ -335,9 +327,9 @@ exports.salesExpenseProfitBetweenDates = async (req, res) => {
 
         res.json({
             success: true,
-            totalSales: totalSales.toFixed(2),
-            totalExpense: totalExpense.toFixed(2),
-            totalProfit: totalProfit.toFixed(2),
+            totalSales: totalSales % 1 === 0 ? totalSales.toFixed(0) : totalSales.toFixed(2),
+            totalExpense: totalExpense % 1 === 0 ? totalExpense.toFixed(0) : totalExpense.toFixed(2),
+            totalProfit: totalProfit % 1 === 0 ? totalProfit.toFixed(0) : totalProfit.toFixed(2),
         });
 
     } catch (error) {
@@ -348,18 +340,16 @@ exports.salesExpenseProfitBetweenDates = async (req, res) => {
 
 exports.monthWiseSalesExpenseProfit = async (req, res) => {
     try {
-        // const { userId, startDate, endDate } = req.body
+        const { userId, startDate, endDate } = req.body
 
-        const userId = '65748c9cab797c53ecb7f3ac'
-        const currentDate = new Date();
-        const startDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() + 1, 1);
-        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
 
         const monthWiseData = [];
 
-        while (startDate <= endDate) {
-            const monthStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-            const monthEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        while (CstartDate <= CendDate) {
+            const monthStartDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth(), 1);
+            const monthEndDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth() + 1, 0);
 
             const recipeSalesData = await exports.recipeWiseSalesDataBetweenDates(userId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
             const monthyear = await formatMonthYear(monthStartDate)
@@ -376,12 +366,12 @@ exports.monthWiseSalesExpenseProfit = async (req, res) => {
 
             monthWiseData.push({
                 month: monthyear,
-                totalSales: totalSales,
-                totalExpense: totalExpense,
-                totalProfit: totalProfit,
+                totalSales: totalSales % 1 === 0 ? totalSales.toFixed(0) : totalSales.toFixed(2),
+                totalExpense: totalExpense % 1 === 0 ? totalExpense.toFixed(0) : totalExpense.toFixed(2),
+                totalProfit: totalProfit % 1 === 0 ? totalProfit.toFixed(0) : totalProfit.toFixed(2),
             });
 
-            startDate.setMonth(startDate.getMonth() + 1);
+            CstartDate.setMonth(CstartDate.getMonth() + 1);
         }
 
         res.json({ success: true, monthWiseData });

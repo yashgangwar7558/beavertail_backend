@@ -40,18 +40,16 @@ exports.getBillsBetweenDates = async (userId, startDate, endDate) => {
 exports.getBillsCountBetweenDates = async (req, res) => {
     try {
 
-        // const { userId, startDate, endDate } = req.body
+        const { userId, startDate, endDate } = req.body
 
-        const userId = '65748c9cab797c53ecb7f3ac'
-        const currentDate = new Date();
-        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
 
         const countBills  = await Sales.countDocuments({
             userId: userId,
             billingDate: {
-                $gte: new Date(startDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
-                $lte: new Date(endDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                $gte: new Date(CstartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                $lte: new Date(CendDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
             },
         })
         res.json({ success: true, countBills });
@@ -287,13 +285,16 @@ exports.totalSalesBetweenDates = async (req, res) => {
     try {
         const { userId, startDate, endDate } = req.body
 
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
+
         const totalSales = await Sales.aggregate([
             {
                 $match: {
                     userId: new mongoose.Types.ObjectId(userId),
                     billingDate: {
-                        $gte: new Date(startDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
-                        $lte: new Date(endDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $gte: new Date(CstartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $lte: new Date(CendDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
                     },
                 },
             },
@@ -316,13 +317,16 @@ exports.monthWiseSalesBetweenDates = async (req, res) => {
     try {
         const { userId, startDate, endDate } = req.body
 
+        const CstartDate = new Date(startDate)
+        const CendDate = new Date(endDate)
+
         const totalSales = await Sales.aggregate([
             {
                 $match: {
                     userId: new mongoose.Types.ObjectId(userId),
                     billingDate: {
-                        $gte: new Date(startDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
-                        $lte: new Date(endDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $gte: new Date(CstartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
+                        $lte: new Date(CendDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),
                     },
                 },
             },

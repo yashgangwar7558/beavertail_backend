@@ -3,12 +3,14 @@ const router = express.Router();
 
 const {
     getInvoice,
-    getAllInvoice
+    getAllInvoiceBwDates,
+    getVendorsTotalBwDates
 } = require('../controllers/invoice')
 
 const { isAuth } = require('../middlewares/auth');
 
 router.post('/get-invoice', getInvoice);
-router.post('/get-invoices', getAllInvoice);
+router.post('/get-invoices', getAllInvoiceBwDates);
+router.post('/get-vendors-total', getVendorsTotalBwDates);
 
 module.exports = router;
