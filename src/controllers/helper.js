@@ -1,4 +1,4 @@
-const AWS = require('../awsConfig');
+const AWS = require('../config/awsConfig');
 const s3 = new AWS.S3();
 
 exports.formatDate = (date) => {
