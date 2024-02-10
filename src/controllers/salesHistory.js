@@ -8,9 +8,9 @@ const { findAverageCostForRecipeInDateRange } = require('../controllers/recipeCo
 const { findAverageModifierCostForRecipeInDateRange } = require('../controllers/modifierCostHistory')
 const { formatDate, formatMonthYear } = require('../controllers/helper');
 
-exports.createSalesHistory = async (userId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, total) => {
+exports.createSalesHistory = async (userId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, total, session) => {
     try {
-        const result = await salesHistory.create({
+        const result = await salesHistory.create([{
             userId,
             recipeId,
             recipeName,
@@ -19,7 +19,7 @@ exports.createSalesHistory = async (userId, recipeId, recipeName, billingId, bil
             quantity,
             menuPrice,
             total,
-        })
+        }], {session})
         return result
     } catch (err) {
         console.log('Error creating sales history:', err.message);
@@ -138,7 +138,7 @@ exports.typeWiseSalesDataBetweenDates = async (userId, startDate, endDate) => {
                 imageUrl,
                 count: 0,
                 avgCost: 0,
-                itemsSold: 0,
+                quantitySold: 0,
                 totalFoodCost: 0,
                 totalModifierCost: 0,
                 totalSales: 0,
@@ -151,7 +151,7 @@ exports.typeWiseSalesDataBetweenDates = async (userId, startDate, endDate) => {
             typeRecipes.forEach((recipe) => {
                 typeSalesData.count++;
                 typeSalesData.avgCost += recipe.avgCost;
-                typeSalesData.itemsSold += recipe.quantitySold;
+                typeSalesData.quantitySold += recipe.quantitySold;
                 typeSalesData.totalFoodCost += recipe.totalFoodCost;
                 typeSalesData.totalModifierCost += recipe.totalModifierCost;
                 typeSalesData.totalSales += recipe.totalSales;

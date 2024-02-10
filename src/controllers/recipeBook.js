@@ -154,25 +154,16 @@ exports.updateRecipe = async (req, res) => {
     }
 };
 
-exports.updateRelatedRecipes = async (ingredientId, userId) => {
+exports.updateRecipesCostInventory = async (userId, recipeId, newInventory, newCost, session) => {
     try {
-        const recipesToUpdate = await Recipe.find({ 'ingredients.ingredient_id': ingredientId, userId: userId });
-        console.log(recipesToUpdate);
-
-        const AllIngredients = await Ingredient.find({ userId });
-        const UnitMaps = await unitMapping.find({ userId });
-
-        await Promise.all(recipesToUpdate.map(async (recipe) => {
-            const newInventory = await inventoryCheck(recipe.ingredients, AllIngredients, UnitMaps);
-            recipe.inventory = newInventory
-            const newCost = await costEstimation(recipe.ingredients, AllIngredients, UnitMaps);
-            recipe.cost = newCost
-            console.log("Update recipe: ", recipe.name, newInventory, newCost);
-            await recipe.save();
-        }));
-
+        const updateRecipe = await Recipe.findById(recipeId);
+        updateRecipe.cost = newCost;
+        updateRecipe.inventory = newInventory;
+        const result = await updateRecipe.save({session});
+        return result;
     } catch (error) {
         console.error(`Error updating related recipes: ${error}`);
+        throw error;
     }
 };
 

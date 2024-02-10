@@ -4,12 +4,12 @@ const User = require('../models/user');
 const Recipe = require('../models/recipeBook');
 const Ingredient = require('../models/ingredients');
 
-exports.createIngredient = async (userId, name, inventory, invUnit, avgCost, category, note, shelfLife, slUnit) => {
+exports.createIngredient = async (userId, name, inventory, invUnit, avgCost, category, note, shelfLife, slUnit, session) => {
     try {
         if (!userId || !name || !inventory || !invUnit || !avgCost) {
             throw new Error('Some fields are missing or invalid!');
         }
-        const result = await Ingredient.create({
+        const result = await Ingredient.create([{
             userId,
             name,
             category,
@@ -19,7 +19,7 @@ exports.createIngredient = async (userId, name, inventory, invUnit, avgCost, cat
             note,
             shelfLife,
             slUnit,
-        });
+        }], {session});
         return result
     } catch (error) {
         console.error('Error creating ingredient:', error.message);
@@ -27,12 +27,12 @@ exports.createIngredient = async (userId, name, inventory, invUnit, avgCost, cat
     }
 };
 
-exports.updateIngredientCostInventory = async (ingredientId, newAvgCost, newInventoryQty) => {
+exports.updateIngredientCostInventory = async (ingredientId, newAvgCost, newInventoryQty, session) => {
     try {
         const updateIngredient = await Ingredient.findById(ingredientId);
         updateIngredient.avgCost = newAvgCost;
         updateIngredient.inventory = newInventoryQty;
-        const result = await updateIngredient.save();
+        const result = await updateIngredient.save({session});
         return result;
     } catch (error) {
         console.error('Error updating ingredient avgcost and inventory:', error.message);

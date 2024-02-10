@@ -1,14 +1,14 @@
 const mongoose = require('mongoose');
 const recipeCostHistory = require('../models/recipeCostHistory');
 
-exports.createRecipeCostHistory = async (userId, recipeId, cost, date) => {
+exports.createRecipeCostHistory = async (userId, recipeId, cost, date, session) => {
     try {
-        const result = await recipeCostHistory.create({
+        const result = await recipeCostHistory.create([{
             userId,
             recipeId,
             cost,
             date: date.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')
-        })
+        }], {session})
         return result
     } catch (err) {
         console.log('Error creating recipe cost history:', err.message);

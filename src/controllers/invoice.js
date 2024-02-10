@@ -3,9 +3,9 @@ const User = require('../models/user');
 const Invoice = require('../models/invoice');
 const { formatDate } = require('../controllers/helper');
 
-exports.createInvoice = async (userId, invoiceNumber, vendor, invoiceDate, ingredients, payment, status, total, invoiceUrl) => {
+exports.createInvoice = async (userId, invoiceNumber, vendor, invoiceDate, ingredients, payment, status, total, invoiceUrl, session) => {
     try {
-        const result = await Invoice.create({
+        const result = await Invoice.create([{
             userId,
             invoiceNumber,
             vendor,
@@ -15,11 +15,28 @@ exports.createInvoice = async (userId, invoiceNumber, vendor, invoiceDate, ingre
             status,
             total,
             invoiceUrl,
-        })
+        }], {session})
         return result
     } catch (err) {
         console.log('Error creating invoice:', err.message);
         throw err
+    }
+}
+
+exports.updateInvoiceStatus = async (req, res) => {
+    try {
+        const { userId, invoiceId, newStatus } = req.body;
+
+        const updatedInvoice = await Invoice.findByIdAndUpdate(
+            invoiceId,
+            { $set: { status: newStatus } },
+            { new: true }
+        );
+
+        res.json({ success: true, updatedInvoice });
+    } catch (error) {
+        console.error('Error updating invoice status:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
 

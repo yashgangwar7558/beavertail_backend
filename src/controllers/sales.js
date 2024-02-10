@@ -4,16 +4,16 @@ const Sales = require('../models/sales');
 const { formatDate } = require('../controllers/helper');
 const { log } = require('console');
 
-exports.createBill = async (userId, billNumber, customerName, billingDate, itemsOrdered, total) => {
+exports.createBill = async (userId, billNumber, customerName, billingDate, itemsOrdered, total, session) => {
     try {
-        const result = await Sales.create({
+        const result = await Sales.create([{
             userId,
             billNumber,
             customerName,
             billingDate,
             itemsOrdered,
             total
-        })
+        }], {session})
         return result
     } catch (err) {
         console.log('Error creating bill:', err.message);

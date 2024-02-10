@@ -5,9 +5,9 @@ const Invoice = require('../models/invoice');
 const { formatDate } = require('../controllers/helper');
 const { log } = require('console');
 
-exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredientName, invoiceId, invoiceNumber, quantity, unit, unitPrice, total) => {
+exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredientName, invoiceId, invoiceNumber, quantity, unit, unitPrice, total, session) => {
     try {
-        const result = await purchaseHistory.create({
+        const result = await purchaseHistory.create([{
             userId,
             ingredientId,
             ingredientName,
@@ -17,7 +17,7 @@ exports.createIngredientPurchaseHistory = async (userId, ingredientId, ingredien
             unit,
             unitPrice,
             total
-        })
+        }], {session})
         return result
     } catch (err) {
         console.log('Error creating purchase history:', err.message);

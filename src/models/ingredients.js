@@ -19,34 +19,6 @@ const ingredientSchema = new mongoose.Schema({
   slUnit: { type: String },
 });
 
-ingredientSchema.post('save', async function (doc, next) {
-  await updateRelatedRecipes(doc._id, doc.userId);
-  next();
-});
-
-updateRelatedRecipes = async (ingredientId, userId) => {
-  try {
-    const recipesToUpdate = await Recipe.find({ 'ingredients.ingredient_id': ingredientId, userId: userId });
-
-    const AllIngredients = await Ingredient.find({ userId });
-    const UnitMaps = await unitMapping.find({ userId });
-
-    await Promise.all(recipesToUpdate.map(async (recipe) => {
-      const newInventory = await inventoryCheck(recipe.ingredients, AllIngredients, UnitMaps);
-      recipe.inventory = newInventory
-      const newCost = await costEstimation(recipe.ingredients, AllIngredients, UnitMaps);
-      recipe.cost = newCost
-      await recipe.save();
-
-      const costHistory = await createRecipeCostHistory(userId, recipe._id, newCost, new Date('2024-01-06'))
-
-    }));
-
-  } catch (error) {
-    console.error(`Error updating related recipes: ${error}`);
-  }
-};
-
 const Ingredient = mongoose.model('Ingredient', ingredientSchema);
 
 module.exports = Ingredient;
