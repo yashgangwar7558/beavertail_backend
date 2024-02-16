@@ -7,7 +7,7 @@ const Ingredient = require('../models/ingredients');
 const unitMapping = require('../models/unitmapping');
 const { createRecipeCostHistory } = require('../controllers/recipeCostHistory');
 const { createModifierCostHistory } = require('../controllers/modifierCostHistory');
-const { uploadToS3, deleteFromS3 } = require('../controllers/helper');
+const { uploadToS3, deleteFromS3, uploadToGCS, deleteFromGCS } = require('../controllers/helper');
 
 exports.createRecipe = async (req, res) => {
     try {
@@ -35,9 +35,9 @@ exports.createRecipe = async (req, res) => {
             const { buffer } = req.file;
             const fileName = `${name}_${Date.now()}`
             const fileType = req.file.mimetype
-            const bucketName = 'beavertail-7558'
+            const bucketName = process.env.BUCKET_NAME
             const folderPath = 'recipes'
-            const imageUrl = await uploadToS3(buffer, fileName, fileType, bucketName, folderPath)
+            const imageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
 
             const recipe = await Recipe.create({
                 userId,
@@ -107,10 +107,10 @@ exports.updateRecipe = async (req, res) => {
             const { buffer } = req.file;
             const fileName = `${name}_${Date.now()}`
             const fileType = req.file.mimetype
-            const bucketName = 'beavertail-7558'
+            const bucketName = process.env.BUCKET_NAME
             const folderPath = 'recipes'
-            await deleteFromS3(imageUrl, bucketName)
-            const newimageUrl = await uploadToS3(buffer, fileName, fileType, bucketName, folderPath)
+            await deleteFromGCS(imageUrl, bucketName)
+            const newimageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
 
             const updatedRecipe = await Recipe.findByIdAndUpdate(recipeId, {
                 userId,

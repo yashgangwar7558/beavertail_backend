@@ -1,4 +1,7 @@
 const AWS = require('../config/awsConfig');
+const storage = require('../config/gcpStorageConfig');
+const path = require('path');
+
 const s3 = new AWS.S3();
 
 exports.formatDate = (date) => {
@@ -118,3 +121,58 @@ exports.deleteFromS3 = async (objectUrl, bucketName) => {
         throw error;
     }
 }
+
+exports.uploadToGCS = async (fileBuffer, fileName, fileType, bucketName, folderPath) => {
+    try {
+        if (folderPath && !folderPath.endsWith('/')) {
+            folderPath += '/';
+        }
+
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(folderPath + fileName);
+
+        const stream = file.createWriteStream({
+            metadata: {
+                contentType: fileType,
+            },
+            predefinedAcl: 'publicRead',
+        });
+
+        return new Promise((resolve, reject) => {
+            stream.on('error', (error) => {
+                console.error('Error uploading to GCS:', error.message);
+                reject(error);
+            });
+
+            stream.on('finish', () => {
+                const publicUrl = `https://storage.googleapis.com/${bucketName}/${folderPath}${fileName}`;
+                console.log('File uploaded successfully. Public URL:', publicUrl);
+                resolve(publicUrl);
+            });
+
+            stream.end(fileBuffer);
+        });
+    } catch (error) {
+        console.error('Error uploading to GCS:', error.message);
+        throw error;
+    }
+};
+
+exports.deleteFromGCS = async (objectUrl, bucketName) => {
+    try {
+        const url = new URL(objectUrl);
+        const decodedObjectName = decodeURIComponent(url.pathname.substring(1));
+
+        const objectNameWithoutBucket = decodedObjectName.replace(`${bucketName}/`, '');
+
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(objectNameWithoutBucket);
+
+        await file.delete();
+
+        console.log(`File deleted successfully: ${objectNameWithoutBucket}`);
+    } catch (error) {
+        console.error('Error deleting file from GCS:', error.message);
+        throw error;
+    }
+};

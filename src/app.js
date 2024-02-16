@@ -55,7 +55,7 @@ connectToMongoDB()
         // app.use(modifierCostHistoryRouter)
 
         app.get('/', async (req, res) => {
-            res.status(200).send("Server is live!")
+            res.status(200).send("Welcome to Beavertail. Server is live!")
         })
 
         app.listen(port, () => {

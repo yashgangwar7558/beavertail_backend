@@ -9,7 +9,7 @@ const { createRecipeCostHistory } = require('../controllers/recipeCostHistory');
 const { updateRecipesCostInventory } = require('../controllers/recipeBook');
 const { createInvoice } = require('../controllers/invoice');
 const { createIngredientPurchaseHistory } = require('../controllers/purchaseHistory');
-const { uploadToS3, costEstimation, inventoryCheck } = require('../controllers/helper');
+const { uploadToS3, costEstimation, inventoryCheck, uploadToGCS } = require('../controllers/helper');
 
 exports.processInvoice = async (req, res) => {
     const session = await mongoose.startSession();
@@ -36,9 +36,9 @@ exports.processInvoice = async (req, res) => {
                     const { buffer } = req.file;
                     const fileName = `${invoiceNumber}_${Date.now()}`;
                     const fileType = req.file.mimetype;
-                    const bucketName = 'beavertail-7558';
+                    const bucketName = process.env.BUCKET_NAME;
                     const folderPath = 'invoices';
-                    // const invoiceUrl = await uploadToS3(buffer, fileName, fileType, bucketName, folderPath);
+                    // const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
                     const invoiceUrl = 'https://www.google.com/';
 
                     if (!invoiceUrl) {
