@@ -11,6 +11,6 @@ const { isAuth } = require('../middlewares/auth');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage })
 
-router.post('/process-invoice', upload.single('invoiceFile'), processInvoice);
+router.post('/process-invoice', processInvoice);
 
 module.exports = router;

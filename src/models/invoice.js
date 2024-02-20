@@ -16,7 +16,13 @@ const invoiceSchema = new mongoose.Schema({
     invoiceDate: { type: Date },
     ingredients: [ingredientsBoughtSchema],
     payment: { type: String },
-    status: { type: String, default: 'Pending' },
+    status: {
+        type: {
+            type: String,
+            default: 'Pending Review',
+        },
+        remark: String,
+    },
     total: { type: String, required: true },
     invoiceUrl: { type: String, required: true },
 });

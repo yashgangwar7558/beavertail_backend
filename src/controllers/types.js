@@ -4,7 +4,6 @@ const User = require('../models/user');
 
 exports.createRecipeType = async (req, res) => {
     try {
-
         const { userId, type, imageUrl } = req.body
 
         const result = await Types.create({

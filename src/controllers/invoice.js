@@ -1,41 +1,142 @@
 const mongoose = require('mongoose');
 const User = require('../models/user');
 const Invoice = require('../models/invoice');
-const { formatDate } = require('../controllers/helper');
+const { formatDate, uploadToGCS, deleteFromGCS } = require('../controllers/helper');
+const { log } = require('console');
 
-exports.createInvoice = async (userId, invoiceNumber, vendor, invoiceDate, ingredients, payment, status, total, invoiceUrl, session) => {
+exports.createInvoice = async (req, res) => {
     try {
-        const result = await Invoice.create([{
-            userId,
+        const { userId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body;
+        const ingredients = JSON.parse(req.body.ingredients);
+
+        if (!userId || !invoiceNumber || !vendor || !invoiceDate || !ingredients || !payment || !total) {
+            return res.json({
+                success: false,
+                message: 'Some fields are missing!',
+            });
+        }
+
+        if (req.file) {
+            const { buffer } = req.file;
+            const fileName = `${invoiceNumber}_${Date.now()}`;
+            const fileType = req.file.mimetype;
+            const bucketName = process.env.BUCKET_NAME;
+            const folderPath = 'invoices';
+            // const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
+            const invoiceUrl = 'https://www.google.com/';
+
+            if (!invoiceUrl) {
+                throw new Error('Error uploading file to S3');
+            }
+
+            const invoice = await Invoice.create([{
+                userId,
+                invoiceNumber,
+                vendor,
+                invoiceDate,
+                ingredients,
+                payment,
+                status: {
+                    type: statusType || 'Pending Review',
+                    remark: ''
+                },
+                total,
+                invoiceUrl,
+            }])
+
+            res.json({ success: true, invoice });
+        } else {
+            return res.json({
+                success: false,
+                message: 'Invoice file missing!',
+            });
+        }
+    } catch (error) {
+        console.error('Error creating invoice:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.updateInvoice = async (req, res) => {
+    try {
+        const { invoiceId, userId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body
+        const ingredients = JSON.parse(req.body.ingredients);
+
+        if (!invoiceId || !userId || !invoiceNumber || !vendor || !invoiceDate || !ingredients || !payment || !total) {
+            return res.json({
+                success: false,
+                message: 'Some fields are missing!',
+            });
+        }
+
+        const updatedInvoice = await Invoice.findByIdAndUpdate(invoiceId, {
             invoiceNumber,
             vendor,
             invoiceDate,
             ingredients,
             payment,
-            status,
-            total,
-            invoiceUrl,
-        }], {session})
-        return result
-    } catch (err) {
-        console.log('Error creating invoice:', err.message);
-        throw err
+            status: {
+                type: statusType || 'Pending Review',
+                remark: ''
+            },
+            total
+        }, {
+            new: true
+        });
+
+        res.json({ success: true, updatedInvoice });
+
+    } catch (error) {
+        console.error('Error updating invoice:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
 
 exports.updateInvoiceStatus = async (req, res) => {
     try {
-        const { userId, invoiceId, newStatus } = req.body;
+        const { userId, invoiceId, newStatus, newRemark } = req.body;
 
         const updatedInvoice = await Invoice.findByIdAndUpdate(
             invoiceId,
-            { $set: { status: newStatus } },
+            { $set: { status: { type: newStatus, remark: newRemark } } },
             { new: true }
         );
 
         res.json({ success: true, updatedInvoice });
     } catch (error) {
         console.error('Error updating invoice status:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.deleteInvoice = async (req, res) => {
+    try {
+        const { invoiceId } = req.body
+
+        if (!invoiceId) {
+            return res.json({
+                success: false,
+                message: 'invoiceId not found!',
+            });
+        }
+
+        const invoice = await Invoice.findById(invoiceId);
+        if (!invoice) {
+            return res.json({
+                success: false,
+                message: 'invoice not found!',
+            });
+        }
+
+        const invoiceUrl = invoice.invoiceUrl;
+        const bucketName = process.env.BUCKET_NAME
+
+        const result = await Invoice.deleteOne({ _id: invoiceId });
+        // await deleteFromGCS(invoiceUrl, bucketName)
+
+        res.json({ success: true, message: 'Invoice deleted!' });
+    } catch (err) {
+        console.error('Error deleting invoice:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }

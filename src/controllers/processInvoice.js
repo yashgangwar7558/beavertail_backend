@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/user');
 const Ingredient = require('../models/ingredients');
 const Recipe = require('../models/recipeBook');
+const Invoice = require('../models/invoice');
 const unitMapping = require('../models/unitmapping');
 const { createIngredientCostHistory } = require('../controllers/ingredientCostHistory');
 const { createIngredient, updateIngredientCostInventory } = require('../controllers/ingredients');
@@ -16,60 +17,14 @@ exports.processInvoice = async (req, res) => {
 
     try {
         await session.withTransaction(async () => {
-            const { userId, invoiceNumber, vendor, invoiceDate, payment, status, total } = req.body;
-            const ingredients = JSON.parse(req.body.ingredients);
-
-            if (!userId || !invoiceNumber || !vendor || !invoiceDate || !ingredients || !payment || !status || !total) {
-                return res.json({
-                    success: false,
-                    message: 'Some fields are missing!',
-                });
-            }
-
+            const { userId, invoiceId } = req.body;
+            const invoice = await Invoice.findById(invoiceId);
             const AllIngredients = await Ingredient.find({ userId });
             const UnitMaps = await unitMapping.find({ userId });
-            let createdInvoice;
 
-            if (req.file) {
-                // Process - 1 (Uploading to S3, creating new invoice)
-                try {
-                    const { buffer } = req.file;
-                    const fileName = `${invoiceNumber}_${Date.now()}`;
-                    const fileType = req.file.mimetype;
-                    const bucketName = process.env.BUCKET_NAME;
-                    const folderPath = 'invoices';
-                    // const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
-                    const invoiceUrl = 'https://www.google.com/';
-
-                    if (!invoiceUrl) {
-                        throw new Error('Error uploading file to S3');
-                    }
-
-                    createdInvoice = await createInvoice(
-                        userId,
-                        invoiceNumber,
-                        vendor,
-                        invoiceDate,
-                        ingredients,
-                        payment,
-                        status,
-                        total,
-                        invoiceUrl,
-                        session,
-                    );
-                } catch (error) {
-                    throw new Error(`Error in Creating invoice, ${error.message}`);
-                }
-            } else {
-                return res.json({
-                    success: false,
-                    message: 'Invoice file missing!',
-                });
-            }
-
-            // Process 2 - Ingredients cost/inventory & ingredient cost history Update
+            // Process 1 - Ingredients cost/inventory & ingredient cost history Update
             try {
-                for (const ingredient of ingredients) {
+                for (const ingredient of invoice.ingredients) {
                     const matchingIngredient = AllIngredients.find(
                         (allIngredient) => allIngredient.name === ingredient.name
                     );
@@ -93,7 +48,7 @@ exports.processInvoice = async (req, res) => {
                         const newInventoryQty = (convertedPrevQty + convertedNewQty) / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
 
                         const updateIngredient = await updateIngredientCostInventory(matchingIngredient._id, newAvgCost, newInventoryQty, session)
-                        const ingCostHistory = await createIngredientCostHistory(userId, matchingIngredient._id, newAvgCost, matchingIngredient.invUnit, new Date(invoiceDate), session)
+                        const ingCostHistory = await createIngredientCostHistory(userId, matchingIngredient._id, newAvgCost, matchingIngredient.invUnit, new Date(invoice.invoiceDate), session)
 
                     } else {
                         const newIngredient = await createIngredient(
@@ -105,7 +60,7 @@ exports.processInvoice = async (req, res) => {
                             session
                         );
 
-                        const ingCostHistory = await createIngredientCostHistory(userId, newIngredient._id, ingredient.unitPrice, ingredient.unit, new Date(invoiceDate), session)
+                        const ingCostHistory = await createIngredientCostHistory(userId, newIngredient._id, ingredient.unitPrice, ingredient.unit, new Date(invoice.invoiceDate), session)
                     }
                 }
             } catch (error) {
@@ -114,9 +69,9 @@ exports.processInvoice = async (req, res) => {
 
             const AllUpdatedIngredients = await Ingredient.find({ userId });
 
-            // Process 3 - Recipes cost/inventory & recipe cost history update
+            // Process 2 - Recipes cost/inventory & recipe cost history update
             try {
-                const updatedIngredientsName = ingredients.map((item) => item.name)
+                const updatedIngredientsName = invoice.ingredients.map((item) => item.name)
                 const query = {
                     userId,
                     'ingredients.name': { $in: updatedIngredientsName },
@@ -128,16 +83,16 @@ exports.processInvoice = async (req, res) => {
                     const newCost = await costEstimation(recipe.ingredients, AllIngredients, UnitMaps);
 
                     const updateRecipe = await updateRecipesCostInventory(userId, recipe._id, newInventory, newCost, session)
-                    const recipeCostHistory = await createRecipeCostHistory(userId, recipe._id, newCost, new Date(invoiceDate), session)
+                    const recipeCostHistory = await createRecipeCostHistory(userId, recipe._id, newCost, new Date(invoice.invoiceDate), session)
                 }));
 
             } catch (error) {
                 throw new Error(`Error in updating recipe cost/inventory, ${error.message}`)
             }
 
-            // Process 4 - Ingredient Purchase History Update
+            // Process 3 - Ingredient Purchase History Update
             try {
-                for (const ingredient of ingredients) {
+                for (const ingredient of invoice.ingredients) {
                     const matchingIngredient = AllUpdatedIngredients.find(
                         (allIngredient) => allIngredient.name === ingredient.name
                     );
@@ -145,8 +100,8 @@ exports.processInvoice = async (req, res) => {
                         userId,
                         matchingIngredient._id,
                         matchingIngredient.name,
-                        createdInvoice[0]._id,
-                        invoiceNumber,
+                        invoiceId,
+                        invoice.invoiceNumber,
                         ingredient.quantity,
                         ingredient.unit,
                         ingredient.unitPrice,
@@ -156,6 +111,17 @@ exports.processInvoice = async (req, res) => {
                 }
             } catch (error) {
                 throw new Error(`Error in creating purchase history, ${error.message}`);
+            }
+
+            // Process 4 - Update invoice status to Processed-PendingPayment
+            try {
+                const updatedInvoice = await Invoice.findByIdAndUpdate(
+                    invoiceId,
+                    { $set: { status: { type: 'Processed-PendingPayment', remark: '' } } },
+                    { new: true, session }
+                );
+            } catch (error) {
+                throw new Error(`Error in updating invoice status, ${error.message}`);
             }
 
             await session.commitTransaction();

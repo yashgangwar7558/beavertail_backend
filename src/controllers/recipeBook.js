@@ -229,10 +229,10 @@ exports.deleteRecipe = async (req, res) => {
         }
 
         const imageUrl = recipe.imageUrl; 
-        const bucketName = 'beavertail-invoices-7558'
+        const bucketName = process.env.BUCKET_NAME
 
         const result = await Recipe.deleteOne({ _id: recipeId });
-        await deleteFromS3(imageUrl, bucketName)
+        await deleteFromGCS(imageUrl, bucketName)
 
         res.json({ success: true, message: 'Recipe deleted!' });
     } catch (error) {
