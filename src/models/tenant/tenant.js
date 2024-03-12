@@ -27,11 +27,11 @@ const tenantSchema = new mongoose.Schema({
         ref: 'User',
         default: [],
     }],
-    adminId: {
+    adminId: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        default: null
-    }
+        default: []
+    }]
 });
 
 const Tenant = new mongoose.model("Tenant", tenantSchema);

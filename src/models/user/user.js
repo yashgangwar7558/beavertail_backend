@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
     },
     address: {
         type: String,
-        required: true,
+        default: '',
     },
     roles: {
         type: [{
@@ -49,6 +49,7 @@ const userSchema = new mongoose.Schema({
     tenantId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Tenant',
+        required: true,
     },
     status: {
         type: String,

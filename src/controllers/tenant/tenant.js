@@ -28,6 +28,46 @@ exports.createTenant = async (req, res) => {
     }
 };
 
+exports.updateTenant = async (req, res) => {
+    try {
+        const { _id, tenantName, tenantDescription, featureIds, invoiceEmails, billEmails } = req.body;
+
+        if (!_id || !tenantName || !tenantDescription || !featureIds) {
+            return res.json({
+                success: false,
+                message: 'Some required fields are missing!',
+            });
+        }
+
+        const updatedTenant = await Tenant.findByIdAndUpdate(
+            _id,
+            {
+                $set: {
+                    tenantName,
+                    tenantDescription,
+                    featureIds,
+                    invoiceEmails,
+                    billEmails,
+                },
+            },
+            { new: true } 
+        );
+
+        if (!updatedTenant) {
+            return res.json({
+                success: false,
+                message: 'Tenant not found or could not be updated!',
+            });
+        }
+
+        res.json({ success: true, tenant: updatedTenant });
+    } catch (error) {
+        console.error('Error updating tenant:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+
 exports.getTenant = async (req, res) => {
     try {
         const { tenantId } = req.body;

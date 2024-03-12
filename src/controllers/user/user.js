@@ -1,10 +1,12 @@
 const jwt = require('jsonwebtoken');
 const User = require('../../models/user/user');
 const Feature = require('../../models/user/feature');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 exports.createUser = async (req, res) => {
     try {
-        const { username, password, firstName, lastName, email, mobileNo, address, tenantId, status } = req.body
+        const { username, password, firstName, lastName, email, mobileNo, address, rolesAssigned, tenantId, status } = req.body
         const isNewUser1 = await User.isThisEmailInUse(email)
         const isNewUser2 = await User.isThisMobileNoInUse(mobileNo)
         const isNewUser3 = await User.isThisUsernameInUse(username)
@@ -16,6 +18,11 @@ exports.createUser = async (req, res) => {
             });
         }
 
+        const formattedRoles = rolesAssigned.map(role => ({
+            roleName: role.roleName,
+            roleId: role._id,
+        })) || [];
+
         const user = await User({
             username,
             password,
@@ -24,6 +31,7 @@ exports.createUser = async (req, res) => {
             email,
             mobileNo,
             address,
+            roles: formattedRoles,
             tenantId,
             status
         });
@@ -33,7 +41,7 @@ exports.createUser = async (req, res) => {
         console.error('Error creating user:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
-};
+}
 
 exports.userSignIn = async (req, res) => {
     try {
@@ -116,7 +124,7 @@ exports.userSignIn = async (req, res) => {
         console.error('Error signing user:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
-};
+}
 
 exports.userSignOut = async (req, res) => {
     if (req.headers && req.headers.authorization) {
@@ -134,7 +142,21 @@ exports.userSignOut = async (req, res) => {
         await User.findByIdAndUpdate(req.user._id, { tokens: newTokens });
         res.json({ success: true, message: 'Sign out successfully!' });
     }
-};
+}
+
+exports.getUser = async (req, res) => {
+    try {
+        const { userId } = req.body
+
+        const selectedFields = '_id username firstName lastName email mobileNo address tenantId status roles';
+        const user = await User.findById(userId).select(selectedFields)
+
+        res.json({ success: true, user });
+    } catch (err) {
+        console.error('Error getting user:', err.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
 
 exports.getNonApprovedUsers = async (req, res) => {
     try {
@@ -164,13 +186,43 @@ exports.getApprovedUsers = async (req, res) => {
     }
 }
 
+exports.updateUser = async (req, res) => {
+    try {
+        const { _id, username, firstName, lastName, email, mobileNo, address, tenantId, status, roles } = req.body;
+
+        const updateObject = {
+            username: username,
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            mobileNo: mobileNo,
+            address: address,
+            tenantId: tenantId,
+            status: status,
+            roles: roles,
+        };
+
+        const updatedUser = await User.findByIdAndUpdate(req.body._id, updateObject, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.json({ success: true, user: updatedUser });
+    } catch (err) {
+        console.error('Error updating user:', err.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+
 exports.updateUserStatus = async (req, res) => {
     try {
         const { userId, rolesAssigned, newStatus } = req.body;
 
         const formattedRoles = rolesAssigned.map(role => ({
             roleName: role.roleName,
-            roleId: role._id,  
+            roleId: role._id,
         })) || [];
 
         const updateObject = {
@@ -185,7 +237,7 @@ exports.updateUserStatus = async (req, res) => {
         console.error('Error updating user status:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
-};
+}
 
 exports.userAllowedRoutes = async (userId) => {
     try {
@@ -214,3 +266,41 @@ exports.userAllowedRoutes = async (userId) => {
         // res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
 }
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { userId, oldPassword, newPassword, confNewPassword } = req.body;
+
+        if (!oldPassword || !newPassword || !confNewPassword) {
+            return res.json({
+                success: false,
+                message: 'Some fields are missing.',
+            });
+        }
+
+        const user = await User.findById(userId);
+
+        const isMatch = await user.comparePassword(oldPassword);
+        if (!isMatch) {
+            return res.json({
+                success: false,
+                message: 'Old password is incorrect.',
+            });
+        }
+
+        if (newPassword !== confNewPassword) {
+            return res.json({
+                success: false,
+                message: 'New password and confirm new password do not match.',
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 8);
+        await User.updateOne({ _id: userId }, { $set: { password: hashedPassword } });
+
+        res.json({ success: true, message: 'Password changed successfully.' });
+    } catch (error) {
+        console.error('Error changing password:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};

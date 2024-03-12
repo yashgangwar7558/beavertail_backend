@@ -54,13 +54,13 @@ exports.validateUserSignUp = [
     .withMessage('Mobile number is required!')
     .isMobilePhone('any', { strictMode: false }) 
     .withMessage('Invalid mobile number!'),
-  check('address')
-    .trim()
-    .not()
-    .isEmpty()
-    .withMessage('Address is required!')
-    .isLength({ min: 5, max: 100 })
-    .withMessage('Address must be between 5 and 100 characters long'),
+  // check('address')
+  //   .trim()
+  //   .not()
+  //   .isEmpty()
+  //   .withMessage('Address is required!')
+  //   .isLength({ min: 5, max: 100 })
+  //   .withMessage('Address must be between 5 and 100 characters long'),
   check('tenantId')
     .notEmpty().withMessage('Tenant is required!')
     .isMongoId().withMessage('Invalid Tenant!'),
