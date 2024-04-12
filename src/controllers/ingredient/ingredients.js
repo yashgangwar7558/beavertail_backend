@@ -29,7 +29,7 @@ exports.createIngredient = async (tenantId, name, inventory, invUnit, avgCost, s
     }
 };
 
-exports.updateIngredient = async (ingredientId, newAvgCost, newInventoryQty, newLastPurchasePrice, newMedianPurchasePrice, session) => {
+exports.updateIngredientPricesInventory = async (ingredientId, newAvgCost, newInventoryQty, newLastPurchasePrice, newMedianPurchasePrice, session) => {
     try {
         const updateIngredient = await Ingredient.findById(ingredientId);
         updateIngredient.avgCost = newAvgCost;

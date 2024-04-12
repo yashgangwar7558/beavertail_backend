@@ -6,7 +6,7 @@ const Recipe = require('../../models/recipe/recipeBook');
 const Invoice = require('../../models/invoice/invoice');
 const unitMapping = require('../../models/ingredient/unitmapping');
 const { createIngredientCostHistory } = require('../ingredient/ingredientCostHistory');
-const { createIngredient, updateIngredientCostInventory } = require('../ingredient/ingredients');
+const { createIngredient, updateIngredientPricesInventory } = require('../ingredient/ingredients');
 const { createRecipeCostHistory } = require('../recipe/recipeCostHistory');
 const { updateRecipesCostInventory } = require('../recipe/recipeBook');
 const { createIngredientPurchaseHistory } = require('../invoice/purchaseHistory');
@@ -46,8 +46,10 @@ exports.processInvoice = async (req, res) => {
 
                         const newAvgCost = (((convertedPrevAvgCost * convertedPrevQty) + (convertedNewCost * convertedNewQty)) / (convertedPrevQty + convertedNewQty)) * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
                         const newInventoryQty = (convertedPrevQty + convertedNewQty) / getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit);
+                        const newLastPurchasePrice = convertedNewCost * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit)
+                        const newMedianPurchasePrice = convertedNewCost * getConversionFactor(matchingIngredient.invUnit, toUnit, unitMap.fromUnit)
 
-                        const updateIngredient = await updateIngredientCostInventory(matchingIngredient._id, newAvgCost, newInventoryQty, session)
+                        const updateIngredient = await updateIngredientPricesInventory(matchingIngredient._id, newAvgCost, newInventoryQty, newLastPurchasePrice, newMedianPurchasePrice, session)
                         const ingCostHistory = await createIngredientCostHistory(tenantId, matchingIngredient._id, newAvgCost, matchingIngredient.invUnit, new Date(invoice.invoiceDate), session)
 
                     } else {
