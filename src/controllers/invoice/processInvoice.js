@@ -66,7 +66,7 @@ exports.processInvoice = async (req, res) => {
                     }
                 }
             } catch (error) {
-                throw new Error(`Error in updating ingredient cost/inventory, ${error.message}`);
+                throw new Error(`Error in updating ingredient avgcost/inventory/purchaseprice:, ${error.message}`);
             }
 
             // Process 2 - Recipes cost/inventory & recipe cost history update

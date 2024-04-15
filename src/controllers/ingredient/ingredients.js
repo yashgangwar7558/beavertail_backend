@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const Ingredient = require('../../models/ingredient/ingredients');
+const { log } = require('console');
 
 exports.createIngredient = async (tenantId, name, inventory, invUnit, avgCost, session, category, note, shelfLife, slUnit) => {
     try {

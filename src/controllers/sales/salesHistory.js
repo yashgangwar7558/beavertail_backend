@@ -321,15 +321,18 @@ exports.salesExpenseProfitBetweenDates = async (req, res) => {
 
         for (const recipeData of recipeSalesData) {
             totalSales += recipeData.totalSales;
-            totalExpense += recipeData.totalFoodCost + recipeData.totalModifierCost;
+            totalExpense += recipeData.totalFoodCost
             totalProfit += recipeData.totalProfitWmc;
         }
 
         res.json({
             success: true,
-            totalSales: totalSales % 1 === 0 ? totalSales.toFixed(0) : totalSales.toFixed(2),
-            totalExpense: totalExpense % 1 === 0 ? totalExpense.toFixed(0) : totalExpense.toFixed(2),
-            totalProfit: totalProfit % 1 === 0 ? totalProfit.toFixed(0) : totalProfit.toFixed(2),
+            // totalSales: totalSales % 1 === 0 ? totalSales.toFixed(0) : totalSales.toFixed(2),
+            // totalExpense: totalExpense % 1 === 0 ? totalExpense.toFixed(0) : totalExpense.toFixed(2),
+            // totalProfit: totalProfit % 1 === 0 ? totalProfit.toFixed(0) : totalProfit.toFixed(2),
+            totalSales: totalSales.toFixed(2),
+            totalExpense: totalExpense.toFixed(2),
+            totalProfit: totalProfit.toFixed(2),
         });
 
     } catch (error) {
@@ -360,15 +363,18 @@ exports.monthWiseSalesExpenseProfit = async (req, res) => {
 
             for (const recipeData of recipeSalesData) {
                 totalSales += recipeData.totalSales;
-                totalExpense += recipeData.totalFoodCost + recipeData.totalModifierCost;
+                totalExpense += recipeData.totalFoodCost
                 totalProfit += recipeData.totalProfitWmc;
             }
 
             monthWiseData.push({
                 month: monthyear,
-                totalSales: totalSales % 1 === 0 ? totalSales.toFixed(0) : totalSales.toFixed(2),
-                totalExpense: totalExpense % 1 === 0 ? totalExpense.toFixed(0) : totalExpense.toFixed(2),
-                totalProfit: totalProfit % 1 === 0 ? totalProfit.toFixed(0) : totalProfit.toFixed(2),
+                // totalSales: totalSales % 1 === 0 ? totalSales.toFixed(0) : totalSales.toFixed(2),
+                // totalExpense: totalExpense % 1 === 0 ? totalExpense.toFixed(0) : totalExpense.toFixed(2),
+                // totalProfit: totalProfit % 1 === 0 ? totalProfit.toFixed(0) : totalProfit.toFixed(2),
+                totalSales: totalSales.toFixed(2),
+                totalExpense: totalExpense.toFixed(2),
+                totalProfit: totalProfit.toFixed(2),
             });
 
             CstartDate.setMonth(CstartDate.getMonth() + 1);
