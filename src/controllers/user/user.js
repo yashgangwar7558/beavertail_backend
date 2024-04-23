@@ -11,10 +11,20 @@ exports.createUser = async (req, res) => {
         const isNewUser2 = await User.isThisMobileNoInUse(mobileNo)
         const isNewUser3 = await User.isThisUsernameInUse(username)
 
-        if (!isNewUser1 || !isNewUser2 || !isNewUser3) {
+        if (!isNewUser1) {
             return res.json({
                 success: false,
-                message: 'This Email/Mobile number/Username is already in use!',
+                message: 'This Email is already in use!',
+            });
+        } else if (!isNewUser2) {
+            return res.json({
+                success: false,
+                message: 'This Mobile number is already in use!',
+            });
+        } else if (!isNewUser3) {
+            return res.json({
+                success: false,
+                message: 'This Username is already in use!',
             });
         }
 

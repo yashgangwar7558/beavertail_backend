@@ -3,7 +3,8 @@ const router = express.Router();
 
 const {
     createRecipeType,
-    getAllTypes
+    getAllTypes,
+    getAllSubTypes
 } = require('../../controllers/recipe/types')
 
 const { isAuth } = require('../../middlewares/auth');
@@ -19,6 +20,18 @@ router.post('/get-types', async (req, res) => {
         res.json({ success: true, types });
     } catch (error) {
         console.error('Error fetching recipe types:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+router.post('/get-subtypes', async (req, res) => {
+    try {
+        // const { Types } = req;
+        const { tenantId, type } = req.body
+        const subTypes = await getAllSubTypes(tenantId, type)
+        res.json({ success: true, subTypes });
+    } catch (error) {
+        console.error('Error fetching recipe sub types:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 });

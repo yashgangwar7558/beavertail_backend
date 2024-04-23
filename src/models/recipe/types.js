@@ -20,7 +20,8 @@ const mongoose = require('mongoose');
 
 const recipeTypesSchema = new mongoose.Schema({
     tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Tenant' },
-    type: { type: String },
+    type: { type: String, required: true },
+    subType: { type: String, required: true },
     imageUrl: { type: String }
 });
 

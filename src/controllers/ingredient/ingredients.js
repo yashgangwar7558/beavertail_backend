@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const Ingredient = require('../../models/ingredient/ingredients');
+const unitMapping = require('../../models/ingredient/unitmapping')
+const { getConversionFactor } = require('../helper')
 const { log } = require('console');
 
 exports.createIngredient = async (tenantId, name, inventory, invUnit, avgCost, session, category, note, shelfLife, slUnit) => {
@@ -102,4 +104,38 @@ exports.getAllIngredient = async (req, res) => {
     }
 };
 
-// inventory edit and updates will also update recipe inventory status and cost of recipe 
+
+exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients) => {
+    try {
+        const ingredients = await Ingredient.find({ tenantId: tenantId });
+        const ingredientsExceedingThreshold = [];
+
+        for (const purchaseIngredient of purchasedIngredients) {
+            const ingredient = ingredients.find(item => item.name === purchaseIngredient.name);
+
+            if (ingredient && ingredient.threshold !== 0) {
+
+                const unitMap = await unitMapping.findOne({ ingredient_id: ingredient._id });
+
+                if (!unitMap) {
+                    throw new Error(`Unit map not found for ingredient ${ingredient.name}, maybe its a new ingredient`);
+                }
+                const convertedNewPurchasePrice = purchaseIngredient.unitPrice / getConversionFactor(purchaseIngredient.unit, unitMap.toUnit, unitMap.fromUnit)
+                const convertedLastMedianPrice = ingredient.medianPurchasePrice / getConversionFactor(ingredient.invUnit, unitMap.toUnit, unitMap.fromUnit)
+                const newPurchasePrice = convertedNewPurchasePrice * getConversionFactor(ingredient.invUnit, unitMap.toUnit, unitMap.fromUnit)
+                const priceDifference = convertedNewPurchasePrice - convertedLastMedianPrice
+                const priceDifferencePercent = (priceDifference / convertedLastMedianPrice) * 100
+                const thresholdAmount = convertedLastMedianPrice * (ingredient.threshold / 100);
+
+                if (priceDifference > thresholdAmount) {
+                    ingredientsExceedingThreshold.push({ ...ingredient, priceDifferencePercent, newPurchasePrice })
+                }
+            }
+        }
+
+        console.log(ingredientsExceedingThreshold);
+    } catch (error) {
+        console.error('Error checking ingredient for threshold:', error.message);
+        throw error;
+    }
+}

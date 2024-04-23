@@ -7,18 +7,32 @@ const Ingredient = require('../../models/ingredient/ingredients');
 const unitMapping = require('../../models/ingredient/unitmapping');
 const { createRecipeCostHistory } = require('../recipe/recipeCostHistory');
 const { createModifierCostHistory } = require('../recipe/modifierCostHistory');
+const { recipeWiseSalesDataBetweenDates, typeWiseSalesDataBetweenDates } = require('../sales/salesHistory')
 const { inventoryCheck, costEstimation, uploadToS3, deleteFromS3, uploadToGCS, deleteFromGCS } = require('../helper');
 
 exports.createRecipe = async (req, res) => {
     try {
-        const { tenantId, name, category, methodPrep, modifierCost, menuPrice, menuType } = req.body;
+        const { tenantId, name, category, subCategory, methodPrep, modifierCost, menuPrice, menuType } = req.body;
         const ingredients = JSON.parse(req.body.ingredients)
         const yields = JSON.parse(req.body.yields)
 
-        if (!tenantId || !name || !category || !yields || !methodPrep || !ingredients || !modifierCost || !menuPrice || !menuType) {
+        const missingFields = [];
+
+        if (!tenantId) missingFields.push('User unauthenticated');
+        if (!name) missingFields.push('Recipe Name');
+        if (!category) missingFields.push('Recipe Type');
+        if (!subCategory) missingFields.push('Recipe Sub Type');
+        if (!methodPrep) missingFields.push('Method of Preperation');
+        if (!modifierCost) missingFields.push('Modifier Cost');
+        if (!menuPrice) missingFields.push('Menu Price');
+        if (!menuType) missingFields.push('Menu Type');
+        if (!yields) missingFields.push('Yields');
+        if (ingredients.length == 0) missingFields.push('Ingredients');
+
+        if (missingFields.length > 0) {
             return res.json({
                 success: false,
-                message: 'Some fields are missing!',
+                message: `Missing fields: ${missingFields.join(', ')}`,
             });
         }
 
@@ -44,6 +58,7 @@ exports.createRecipe = async (req, res) => {
                 tenantId,
                 name,
                 category,
+                subCategory,
                 yields,
                 imageUrl,
                 methodPrep,
@@ -62,7 +77,7 @@ exports.createRecipe = async (req, res) => {
         } else {
             return res.json({
                 success: false,
-                message: 'Recipe photo not provided!',
+                message: 'Recipe image not provided!',
             });
         }
     } catch (error) {
@@ -73,14 +88,29 @@ exports.createRecipe = async (req, res) => {
 
 exports.updateRecipe = async (req, res) => {
     try {
-        const { recipeId, imageUrl, tenantId, name, category, methodPrep, modifierCost, menuPrice, menuType } = req.body;
+        const { recipeId, imageUrl, tenantId, name, category, subCategory, methodPrep, modifierCost, menuPrice, menuType } = req.body;
         const ingredients = JSON.parse(req.body.ingredients)
         const yields = JSON.parse(req.body.yields)
 
-        if (!recipeId || !imageUrl || !tenantId || !name || !category || !yields || !methodPrep || !ingredients || !modifierCost || !menuPrice || !menuType) {
+        const missingFields = [];
+
+        if (!tenantId) missingFields.push('User unauthenticated');
+        if (!recipeId) missingFields.push('Recipe does not exist');
+        if (!imageUrl) missingFields.push('Media');
+        if (!name) missingFields.push('Recipe Name');
+        if (!category) missingFields.push('Recipe Type');
+        if (!subCategory) missingFields.push('Recipe Sub Type');
+        if (!methodPrep) missingFields.push('Method of Preperation');
+        if (!modifierCost) missingFields.push('Modifier Cost');
+        if (!menuPrice) missingFields.push('Menu Price');
+        if (!menuType) missingFields.push('Menu Type');
+        if (!yields) missingFields.push('Yields');
+        if (ingredients.length == 0) missingFields.push('Ingredients');
+
+        if (missingFields.length > 0) {
             return res.json({
                 success: false,
-                message: 'Some fields are missing!',
+                message: `Missing fields: ${missingFields.join(', ')}`,
             });
         }
 
@@ -118,6 +148,7 @@ exports.updateRecipe = async (req, res) => {
                 tenantId,
                 name,
                 category,
+                subCategory,
                 yields,
                 imageUrl: newimageUrl,
                 methodPrep,
@@ -131,12 +162,14 @@ exports.updateRecipe = async (req, res) => {
                 new: true
             });
 
-            res.json({ success: true, updatedRecipe });
+            res.json({ success: true, updatedRecipe })
+            await exports.checkRecipesThreshold(tenantId)
         } else {
             const updatedRecipe = await Recipe.findByIdAndUpdate(recipeId, {
                 tenantId,
                 name,
                 category,
+                subCategory,
                 yields,
                 imageUrl,
                 methodPrep,
@@ -150,7 +183,8 @@ exports.updateRecipe = async (req, res) => {
                 new: true
             });
 
-            res.json({ success: true, updatedRecipe });
+            res.json({ success: true, updatedRecipe })
+            await exports.checkRecipesThreshold(tenantId)
         }
     } catch (error) {
         console.error('Error updating recipe:', error.message);
@@ -163,7 +197,7 @@ exports.updateRecipesCostInventory = async (tenantId, recipeId, newInventory, ne
         const updateRecipe = await Recipe.findById(recipeId);
         updateRecipe.cost = newCost;
         updateRecipe.inventory = newInventory;
-        const result = await updateRecipe.save({session});
+        const result = await updateRecipe.save({ session });
         return result;
     } catch (error) {
         console.error(`Error updating related recipes: ${error}`);
@@ -232,7 +266,7 @@ exports.deleteRecipe = async (req, res) => {
             });
         }
 
-        const imageUrl = recipe.imageUrl; 
+        const imageUrl = recipe.imageUrl;
         const bucketName = process.env.BUCKET_NAME
 
         const result = await Recipe.deleteOne({ _id: recipeId });
@@ -244,4 +278,36 @@ exports.deleteRecipe = async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
+exports.checkRecipesThreshold = async (tenantId, startDate, endDate) => {
+    try {
+        const recipesSalesData = await recipeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
+        const typesSalesData = await typeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
+        const foodCostRecipe = recipesSalesData.filter(recipe => {
+            return (recipe.theoreticalCostWomc > 30);
+        });
+
+        const foodCostType = typesSalesData.filter(type => {
+            return (type.theoreticalCostWomc > 30);
+        });
+
+        const marginRecipe = recipesSalesData.filter(recipe => {
+            return (recipe.theoreticalCostWmc < 30);
+        });
+
+        const marginType = typesSalesData.filter(type => {
+            return (type.theoreticalCostWmc < 30);
+        });
+
+        console.log('Food Cost Recipes:', foodCostRecipe);
+        console.log('Food Cost Types:', foodCostType);
+        console.log('Margin Recipes:', marginRecipe);
+        console.log('Margin Types:', marginType);
+
+        return ({ foodCostRecipe, foodCostType, marginRecipe, marginType })
+    } catch (error) {
+        console.error('Error checking menu item for threshold:', error.message);
+        throw error;
+    }
+}
 

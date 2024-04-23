@@ -1,6 +1,8 @@
 const AWS = require('../config/awsConfig');
 const storage = require('../config/gcpStorageConfig');
 const path = require('path');
+const { recipeWiseSalesDataBetweenDates, typeWiseSalesDataBetweenDates } = require('./sales/salesHistory')
+const Ingredient = require('../models/ingredient/ingredients');
 
 const s3 = new AWS.S3();
 
@@ -75,8 +77,13 @@ exports.costEstimation = async (ingredients, AllIngredients, UnitMaps) => {
 }
 
 exports.getConversionFactor = (fromUnit, toUnit, fromUnitArray) => {
-    const conversionObject = fromUnitArray.find((unit) => unit.unit === fromUnit);
-    return conversionObject ? conversionObject.conversion : 1;
+    try {
+        const conversionObject = fromUnitArray.find((unit) => unit.unit === fromUnit);
+        return conversionObject ? conversionObject.conversion : 1;
+    } catch (error) {
+        console.error('Error getting conversion factor of ingredient:', error.message);
+        throw error;
+    }
 };
 
 exports.uploadToS3 = async (fileBuffer, fileName, fileType, bucketName, folderPath) => {
@@ -90,7 +97,7 @@ exports.uploadToS3 = async (fileBuffer, fileName, fileType, bucketName, folderPa
             Bucket: bucketName,
             Key: folderPath + fileName,
             Body: fileBuffer,
-            ContentType: fileType, 
+            ContentType: fileType,
             ContentDisposition: 'inline',
             ACL: 'bucket-owner-full-control'
         };
@@ -177,3 +184,61 @@ exports.deleteFromGCS = async (objectUrl, bucketName) => {
         throw error;
     }
 };
+
+// exports.checkRecipesThreshold = async (tenantId, startDate, endDate) => {
+//     try {
+//         const recipesSalesData = await recipeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
+//         console.log('recipesSalesData', recipesSalesData);
+//         const typesSalesData = await typeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
+//         const foodCostRecipe = recipesSalesData.filter(recipe => {
+//             return (recipe.theoreticalCostWomc > 50);
+//         });
+
+//         const foodCostType = typesSalesData.filter(type => {
+//             return (type.theoreticalCostWomc > 50);
+//         });
+
+//         const marginRecipe = recipesSalesData.filter(recipe => {
+//             return (recipe.theoreticalCostWmc < 50);
+//         });
+
+//         const marginType = typesSalesData.filter(type => {
+//             return (type.theoreticalCostWmc < 50);
+//         });
+
+//         console.log('Food Cost Recipes:', foodCostRecipe);
+//         console.log('Food Cost Types:', foodCostType);
+//         console.log('Margin Recipes:', marginRecipe);
+//         console.log('Margin Types:', marginType);
+
+//         return({foodCostRecipe, foodCostType, marginRecipe, marginType})
+//     } catch (error) {
+//         console.error('Error checking menu item for threshold:', error.message);
+//         throw error;
+//     }
+// }
+
+// exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients) => {
+//     try {
+//         const ingredients = await Ingredient.find({ tenantId: tenantId });
+//         const ingredientsExceedingThreshold = [];
+
+//         for (const purchaseIngredient of purchasedIngredients) {
+//             const ingredient = ingredients.find(item => item.name === purchaseIngredient.name);
+
+//             if (ingredient && ingredient.threshold !== 0) {
+//                 const priceDifference = purchaseIngredient.unitPrice - ingredient.medianPurchasePrice;
+//                 const thresholdAmount = ingredient.medianPurchasePrice * (ingredient.threshold / 100);
+
+//                 if (priceDifference > thresholdAmount) {
+//                     ingredientsExceedingThreshold.push(ingredient);
+//                 }
+//             }
+//         }
+
+//         return ingredientsExceedingThreshold;
+//     } catch (error) {
+//         console.error('Error checking menu item for threshold:', error.message);
+//         throw error;
+//     }
+// }

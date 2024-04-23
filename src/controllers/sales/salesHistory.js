@@ -81,6 +81,7 @@ exports.recipeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) =
                     recipeId: recipeData._id,
                     name: recipeData.name,
                     type: recipeData.category,
+                    subType: recipeData.subCategory,
                     imageUrl: recipeData.imageUrl,
                     avgCost: avgCost,
                     modifierCost: avgModifierCost,
@@ -91,7 +92,7 @@ exports.recipeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) =
                     totalProfitWomc: matchingRecipe.totalSales - (matchingRecipe.quantitySold * avgCost),
                     totalProfitWmc: matchingRecipe.totalSales - (matchingRecipe.quantitySold * avgCost + matchingRecipe.quantitySold * avgModifierCost),
                     theoreticalCostWomc: ((matchingRecipe.quantitySold * avgCost) / matchingRecipe.totalSales) * 100,
-                    theoreticalCostWmc: (((matchingRecipe.totalSales - (matchingRecipe.quantitySold * avgCost) + (matchingRecipe.quantitySold * avgModifierCost))) / matchingRecipe.totalSales) * 100
+                    theoreticalCostWmc: ((matchingRecipe.totalSales - ((matchingRecipe.quantitySold * avgCost) + (matchingRecipe.quantitySold * avgModifierCost))) / matchingRecipe.totalSales) * 100,
                 }
                 recipesSalesData.push(recipeSalesData);
             } else {
@@ -99,6 +100,7 @@ exports.recipeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) =
                     recipeId: recipeData._id,
                     name: recipeData.name,
                     type: recipeData.category,
+                    subType: recipeData.subCategory,
                     imageUrl: recipeData.imageUrl,
                     avgCost: avgCost,
                     modifierCost: avgModifierCost,
@@ -129,11 +131,12 @@ exports.typeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => 
 
         // Type wise sales data
         const allTypesSalesData = recipeTypes.map((typeData) => {
-            const { type, _id, imageUrl } = typeData;
-            const typeRecipes = allRecipesSalesData.filter((recipe) => recipe.type === type);
+            const { type, subType, _id, imageUrl } = typeData;
+            const typeRecipes = allRecipesSalesData.filter((recipe) => recipe.subType === subType);
 
             const typeSalesData = {
                 type,
+                subType,
                 _id,
                 imageUrl,
                 count: 0,
@@ -150,7 +153,8 @@ exports.typeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => 
 
             typeRecipes.forEach((recipe) => {
                 typeSalesData.count++;
-                typeSalesData.avgCost += (recipe.avgCost * recipe.quantitySold);
+                // typeSalesData.avgCost += (recipe.avgCost * recipe.quantitySold);
+                typeSalesData.avgCost += (recipe.avgCost);
                 typeSalesData.quantitySold += recipe.quantitySold;
                 typeSalesData.totalFoodCost += recipe.totalFoodCost;
                 typeSalesData.totalModifierCost += recipe.totalModifierCost;
@@ -161,10 +165,16 @@ exports.typeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => 
                 typeSalesData.theoreticalCostWmc += recipe.theoreticalCostWmc;
             });
 
+            if (typeSalesData.totalSales !== 0) {
+                typeSalesData.theoreticalCostWomc = (typeSalesData.totalFoodCost / typeSalesData.totalSales) * 100;
+                typeSalesData.theoreticalCostWmc = ((typeSalesData.totalSales - (typeSalesData.totalFoodCost + typeSalesData.totalModifierCost)) / typeSalesData.totalSales) * 100;
+            }
+
             if (typeSalesData.count > 0) {
-                typeSalesData.avgCost /= typeSalesData.quantitySold;
-                typeSalesData.theoreticalCostWomc /= typeSalesData.count;
-                typeSalesData.theoreticalCostWmc /= typeSalesData.count;
+                // typeSalesData.avgCost /= typeSalesData.quantitySold;
+                typeSalesData.avgCost /= typeSalesData.count;
+                // typeSalesData.theoreticalCostWomc /= typeSalesData.count;
+                // typeSalesData.theoreticalCostWmc /= typeSalesData.count;
             }
 
             return typeSalesData;
@@ -188,11 +198,12 @@ exports.typeWiseRecipeSalesDataBetweenDates = async (req, res) => {
 
         // Organize data by type
         const typeWiseSalesData = recipeTypes.map((typeData) => {
-            const { type, _id, imageUrl } = typeData;
-            const recipesOfType = allRecipesSalesData.filter((recipe) => recipe.type === type);
+            const { type, subType, _id, imageUrl } = typeData;
+            const recipesOfType = allRecipesSalesData.filter((recipe) => recipe.subType === subType);
 
             return {
                 type,
+                subType,
                 _id,
                 salesData: recipesOfType.map((recipe) => ({
                     recipeId: recipe.recipeId,

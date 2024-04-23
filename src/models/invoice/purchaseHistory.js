@@ -9,7 +9,8 @@ const purchaseHistorySchema = new mongoose.Schema({
     quantity: { type: Number },
     unit: { type: String },
     unitPrice: { type: Number },
-    total: { type: String }
+    total: { type: String },
+    createdAt: { type: Date, default: Date.now }
 });
 
 const purchaseHistory = mongoose.model('purchaseHistory', purchaseHistorySchema);

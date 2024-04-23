@@ -6,11 +6,12 @@ const setTypesModel = require('../../middlewares/dynamicSchema/setTypesModel');
 exports.createRecipeType = async (req, res) => {
     try {
         // const { Types } = req;
-        const { tenantId, type, imageUrl } = req.body
+        const { tenantId, type, subType, imageUrl } = req.body
 
         const result = await Types.create({
             tenantId,
             type,
+            subType,
             imageUrl
         })
         res.json({ success: true, result });
@@ -29,6 +30,19 @@ exports.getAllTypes = async (tenantId) => {
         return sortedTypes;
     } catch (error) {
         console.error('Error fetching recipe types:', error.message);
+        throw error;
+    }
+};
+
+exports.getAllSubTypes = async (tenantId, type) => {
+    try {
+        const subTypes = await Types.find({ tenantId: tenantId, type: type });
+
+        const sortedSubTypes = subTypes.sort((a, b) => a.subType.localeCompare(b.subType));
+
+        return sortedSubTypes;
+    } catch (error) {
+        console.error('Error fetching recipe sub types:', error.message);
         throw error;
     }
 };

@@ -3,17 +3,27 @@ const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const Invoice = require('../../models/invoice/invoice');
 const { formatDate, uploadToGCS, deleteFromGCS } = require('../helper');
+const { checkIngredientsThreshold } = require('../ingredient/ingredients')
 const { log } = require('console');
 
 exports.createInvoice = async (req, res) => {
     try {
         const { tenantId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body;
         const ingredients = JSON.parse(req.body.ingredients);
+        const missingFields = [];
 
-        if (!tenantId || !invoiceNumber || !vendor || !invoiceDate || !ingredients || !payment || !total) {
+        if (!tenantId) missingFields.push('User unauthenticated');
+        if (!invoiceNumber) missingFields.push('Invoice Number');
+        if (!vendor) missingFields.push('Vendor Name');
+        if (!invoiceDate) missingFields.push('Invoice Date');
+        if (ingredients.length == 0) missingFields.push('Ingredients');
+        if (!payment) missingFields.push('Payment Mode');
+        if (!total) missingFields.push('Total Amount');
+
+        if (missingFields.length > 0) {
             return res.json({
                 success: false,
-                message: 'Some fields are missing!',
+                message: `Missing fields: ${missingFields.join(', ')}`,
             });
         }
 
@@ -45,7 +55,8 @@ exports.createInvoice = async (req, res) => {
                 invoiceUrl,
             }])
 
-            res.json({ success: true, invoice });
+            res.json({ success: true, invoice })
+            await checkIngredientsThreshold(tenantId, ingredients);
         } else {
             return res.json({
                 success: false,
@@ -58,15 +69,123 @@ exports.createInvoice = async (req, res) => {
     }
 }
 
+exports.extractInvoiceData = async (req, res) => {
+    try {
+        if (req.file) {
+            extractedData = {
+                invoiceNumber: '133400406',
+                vendor: 'Gordon Food Service',
+                invoiceDate: '2012-06-20',
+                ingredients: [
+                    {
+                        name: 'Cottage cheese',
+                        quantity: 2,
+                        unit: 'piece',
+                        unitPrice: 6.75,
+                        total: '53.96'
+                    },
+                    {
+                        name: 'Peeled Garlic',
+                        quantity: 1,
+                        unit: 'piece',
+                        unitPrice: 9.01,
+                        total: '9.01'
+                    },
+                    {
+                        name: 'KE SLCD BCN',
+                        quantity: 2,
+                        unit: 'piece',
+                        unitPrice: 34.05,
+                        total: '69.70'
+                    },
+                    {
+                        name: 'Curly Lasagna',
+                        quantity: 1,
+                        unit: 'piece',
+                        unitPrice: 12.43,
+                        total: '12.43'
+                    },
+                    {
+                        name: 'Jalapeno Peppers',
+                        quantity: 1,
+                        unit: 'piece',
+                        unitPrice: 3.90,
+                        total: '23.87'
+                    },
+                    {
+                        name: 'Red Pepper',
+                        quantity: 1,
+                        unit: 'piece',
+                        unitPrice: 27.40,
+                        total: '27.48'
+                    },
+                    {
+                        name: 'Shell Taco',
+                        quantity: 2,
+                        unit: 'piece',
+                        unitPrice: 1.33,
+                        total: '21.24'
+                    },
+                    {
+                        name: 'Bacon Crumbles',
+                        quantity: 1,
+                        unit: 'piece',
+                        unitPrice: 5.37,
+                        total: '64.40'
+                    },
+                    {
+                        name: 'Triumph 1# PPR',
+                        quantity: 2,
+                        unit: 'piece',
+                        unitPrice: 7.97,
+                        total: '63.80'
+                    },
+                    {
+                        name: 'Triumph 1# PPR',
+                        quantity: 2,
+                        unit: 'piece',
+                        unitPrice: 15.70,
+                        total: '62.80'
+                    },
+                ],
+                payment: 'Net Banking',
+                total: '406.69'
+            }
+
+            res.json({ success: true, extractedData })
+
+        } else {
+            return res.json({
+                success: false,
+                message: 'Invoice file missing!',
+            });
+        }
+    } catch (error) {
+        console.error('Error extracting data from invoice:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
 exports.updateInvoice = async (req, res) => {
     try {
         const { invoiceId, tenantId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body
         const ingredients = JSON.parse(req.body.ingredients);
 
-        if (!invoiceId || !tenantId || !invoiceNumber || !vendor || !invoiceDate || !ingredients || !payment || !total) {
+        const missingFields = [];
+
+        if (!tenantId) missingFields.push('User unauthenticated');
+        if (!invoiceId) missingFields.push('Invoice does not exist');
+        if (!invoiceNumber) missingFields.push('Invoice Number');
+        if (!vendor) missingFields.push('Vendor Name');
+        if (!invoiceDate) missingFields.push('Invoice Date');
+        if (ingredients.length == 0) missingFields.push('Ingredients');
+        if (!payment) missingFields.push('Payment Mode');
+        if (!total) missingFields.push('Total Amount');
+
+        if (missingFields.length > 0) {
             return res.json({
                 success: false,
-                message: 'Some fields are missing!',
+                message: `Missing fields: ${missingFields.join(', ')}`,
             });
         }
 

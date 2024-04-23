@@ -18,6 +18,7 @@ const recipeSchema = new mongoose.Schema({
   tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Tenant' },
   name: { type: String, required: true },
   category: { type: String, required: true },
+  subCategory: { type: String, required: true },
   yields: [yieldsSchema],
   imageUrl: { type: String, required: true },
   methodPrep: { type: String },

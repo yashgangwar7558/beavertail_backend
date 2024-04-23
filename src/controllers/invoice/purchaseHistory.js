@@ -3,7 +3,7 @@ const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const purchaseHistory = require('../../models/invoice/purchaseHistory');
 const Invoice = require('../../models/invoice/invoice');
-const { formatDate } = require('../helper');
+const { formatDate, getConversionFactor } = require('../helper');
 const { log } = require('console');
 
 exports.createIngredientPurchaseHistory = async (tenantId, ingredientId, ingredientName, invoiceId, invoiceNumber, quantity, unit, unitPrice, total) => {
@@ -129,19 +129,46 @@ exports.ingredientsTotalPurchaseBwDates = async (req, res) => {
                 },
             },
             {
-              $group: {
-                _id: '$ingredientId',
-                ingredient: { $first: '$ingredientName' },
-                totalQuantity: { $sum: '$quantity' },
-                totalAmount: { $sum: { $toDouble: '$total' } },
-              },
+                $group: {
+                    _id: '$ingredientId',
+                    ingredient: { $first: '$ingredientName' },
+                    totalQuantity: { $sum: '$quantity' },
+                    totalAmount: { $sum: { $toDouble: '$total' } },
+                },
             },
-          ]);
+        ]);
 
-          res.json({ success: true, ingredientsTotal });
+        res.json({ success: true, ingredientsTotal });
     } catch (error) {
         console.error('Error fetching ingredients total purchase:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.getIngredientMedianPurchasePrice = async (tenantId, dbIngredient, invoiceIngredient, unitMap) => {
+    try {
+        const records = await purchaseHistory
+            .find({ ingredientId: dbIngredient._id })
+            .sort({ createdAt: -1 })
+            .limit(4);
+
+        if (records.length === 0) {
+            return 0
+        }
+
+        let totalWeightedPrice = (invoiceIngredient.unitPrice / getConversionFactor(invoiceIngredient.unit, unitMap.toUnit, unitMap.fromUnit)) * invoiceIngredient.quantity;
+        let totalQuantity = invoiceIngredient.quantity;
+
+        records.forEach((record) => {
+            totalWeightedPrice += (record.unitPrice / getConversionFactor(record.unit, unitMap.toUnit, unitMap.fromUnit)) * record.quantity;
+            totalQuantity += record.quantity;
+        });
+
+        const weightedAverageUnitPrice = (totalWeightedPrice / totalQuantity) * getConversionFactor(dbIngredient.invUnit, unitMap.toUnit, unitMap.fromUnit);
+        return weightedAverageUnitPrice;
+    } catch (error) {
+        console.error('Error calculation ingredient median purchase history:', error.message);
+        throw error;
     }
 }
 
