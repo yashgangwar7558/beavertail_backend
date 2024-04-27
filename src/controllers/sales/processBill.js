@@ -11,6 +11,22 @@ exports.processBill = async (req, res) => {
         await session.withTransaction(async () => {
             const { tenantId, billNumber, customerName, billingDate, itemsOrdered, total } = req.body;
 
+            const missingFields = [];
+
+            if (!tenantId) missingFields.push('User unauthenticated');
+            if (!billNumber) missingFields.push('Bill Number');
+            if (!customerName) missingFields.push('Customer Name');
+            if (!billingDate) missingFields.push('Billing Date');
+            if (itemsOrdered.length == 0) missingFields.push('Billing Items');
+            if (!total) missingFields.push('Total Amount');
+
+            if (missingFields.length > 0) {
+                return res.json({
+                    success: false,
+                    message: `Missing fields: ${missingFields.join(', ')}`,
+                });
+            }
+
             let billCreated;
 
             // Process 1 - Sales table bill entry

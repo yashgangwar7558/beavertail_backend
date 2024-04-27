@@ -1,5 +1,6 @@
 const express = require('express');
 require('dotenv').config();
+const { socketConnection } = require('./utils/socket')
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const connectToMongoDB = require('./db/conn')
@@ -17,6 +18,7 @@ const purchaseHistoryRouter = require('./routers/invoice/purchaseHistory');
 const processBillRouter = require('./routers/sales/processBill');
 const salesRouter = require('./routers/sales/sales');
 const salesHistoryRouter = require('./routers/sales/salesHistory');
+const alertsRouter = require('./routers/alert/alert');
 // const recipeCostHistoryRouter = require('./routers/recipe/recipeCostHistory');
 // const modifierCostHistoryRouter = require('./routers/recipe/modifierCostHistory');
 // const ingredientCostHistoryRouter = require('./routers/ingredient/ingredientCostHistory');
@@ -48,6 +50,7 @@ connectToMongoDB()
         app.use(processBillRouter)
         app.use(salesRouter)
         app.use(salesHistoryRouter)
+        app.use(alertsRouter);
         // app.use(recipeCostHistoryRouter)
         // app.use(ingredientCostHistoryRouter)
         // app.use(modifierCostHistoryRouter)
@@ -56,7 +59,10 @@ connectToMongoDB()
             res.status(200).send("Welcome to Beavertail. Server is live!")
         })
 
-        app.listen(port, () => {
+        const server = app.listen(port, () => {
             console.log(`Server is live at port no. ${port}`);
-        })
+        });
+
+        socketConnection(server)
+
     })

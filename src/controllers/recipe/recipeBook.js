@@ -9,6 +9,7 @@ const { createRecipeCostHistory } = require('../recipe/recipeCostHistory');
 const { createModifierCostHistory } = require('../recipe/modifierCostHistory');
 const { recipeWiseSalesDataBetweenDates, typeWiseSalesDataBetweenDates } = require('../sales/salesHistory')
 const { inventoryCheck, costEstimation, uploadToS3, deleteFromS3, uploadToGCS, deleteFromGCS } = require('../helper');
+const { createAlert } = require('../../controllers/alert/alert')
 
 exports.createRecipe = async (req, res) => {
     try {
@@ -283,28 +284,62 @@ exports.checkRecipesThreshold = async (tenantId, startDate, endDate) => {
     try {
         const recipesSalesData = await recipeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
         const typesSalesData = await typeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
-        const foodCostRecipe = recipesSalesData.filter(recipe => {
-            return (recipe.theoreticalCostWomc > 30);
-        });
 
-        const foodCostType = typesSalesData.filter(type => {
-            return (type.theoreticalCostWomc > 30);
-        });
+        const foodcost_threshold = 30
+        const margin_threshold = 30
 
-        const marginRecipe = recipesSalesData.filter(recipe => {
-            return (recipe.theoreticalCostWmc < 30);
-        });
+        let details = {}
+        for (const recipe of recipesSalesData) {
+            if (recipe.theoreticalCostWomc > foodcost_threshold && recipe.quantitySold != 0) {
+                details = {
+                    item_name: recipe.name,
+                    threshold: foodcost_threshold,
+                    item_foodcost: recipe.theoreticalCostWomc
+                }
+                await createAlert(tenantId, 'FoodCost_Item', 'High Foodcost', details);
+            } if (recipe.theoreticalCostWmc < margin_threshold && recipe.quantitySold != 0) {
+                details = {
+                    item_name: recipe.name,
+                    threshold: margin_threshold,
+                    item_margin: recipe.theoreticalCostWmc
+                }
+                await createAlert(tenantId, 'Margin_Item', 'Low Margin', details);
+            }
+        }
+        for (const type of typesSalesData) {
+            if (type.theoreticalCostWomc > foodcost_threshold && type.quantitySold != 0) {
+                details = {
+                    type_name: type.subType,
+                    threshold: foodcost_threshold,
+                    type_foodcost: type.theoreticalCostWomc
+                }
+                await createAlert(tenantId, 'FoodCost_Type', 'High Foodcost', details);
+            } if (type.theoreticalCostWmc < margin_threshold && type.quantitySold != 0) {
+                details = {
+                    type_name: type.subType,
+                    threshold: margin_threshold,
+                    type_margin: type.theoreticalCostWmc
+                }
+                await createAlert(tenantId, 'Margin_Type', 'Low Margin', details);
+            }
+        }
 
-        const marginType = typesSalesData.filter(type => {
-            return (type.theoreticalCostWmc < 30);
-        });
-
-        console.log('Food Cost Recipes:', foodCostRecipe);
-        console.log('Food Cost Types:', foodCostType);
-        console.log('Margin Recipes:', marginRecipe);
-        console.log('Margin Types:', marginType);
-
-        return ({ foodCostRecipe, foodCostType, marginRecipe, marginType })
+        // const foodCostRecipe = recipesSalesData.filter(recipe => {
+        //     return (recipe.theoreticalCostWomc > 30);
+        // });
+        // const foodCostType = typesSalesData.filter(type => {
+        //     return (type.theoreticalCostWomc > 30);
+        // });
+        // const marginRecipe = recipesSalesData.filter(recipe => {
+        //     return (recipe.theoreticalCostWmc < 30);
+        // });
+        // const marginType = typesSalesData.filter(type => {
+        //     return (type.theoreticalCostWmc < 30);
+        // });
+        // console.log('Food Cost Recipes:', foodCostRecipe);
+        // console.log('Food Cost Types:', foodCostType);
+        // console.log('Margin Recipes:', marginRecipe);
+        // console.log('Margin Types:', marginType);
     } catch (error) {
         console.error('Error checking menu item for threshold:', error.message);
         throw error;

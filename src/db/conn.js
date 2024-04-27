@@ -14,7 +14,7 @@ async function connectToMongoDB() {
                 useUnifiedTopology: true,
             }
         ).then((res) => {
-            console.log("Successfully Connected to the database");
+            console.log("Successfully connected to the database");
         }).catch((err) => {
             console.log("Connection failed to the database!!");
         });

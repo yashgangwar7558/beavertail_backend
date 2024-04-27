@@ -20,7 +20,7 @@ exports.createSalesHistory = async (tenantId, recipeId, recipeName, billingId, b
             quantity,
             menuPrice,
             total,
-        }], {session})
+        }], { session })
         return result[0]
     } catch (err) {
         console.log('Error creating sales history:', err.message);
@@ -153,8 +153,8 @@ exports.typeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => 
 
             typeRecipes.forEach((recipe) => {
                 typeSalesData.count++;
-                // typeSalesData.avgCost += (recipe.avgCost * recipe.quantitySold);
-                typeSalesData.avgCost += (recipe.avgCost);
+                typeSalesData.avgCost += (recipe.avgCost * recipe.quantitySold);
+                // typeSalesData.avgCost += (recipe.avgCost);
                 typeSalesData.quantitySold += recipe.quantitySold;
                 typeSalesData.totalFoodCost += recipe.totalFoodCost;
                 typeSalesData.totalModifierCost += recipe.totalModifierCost;
@@ -165,17 +165,17 @@ exports.typeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => 
                 typeSalesData.theoreticalCostWmc += recipe.theoreticalCostWmc;
             });
 
+            if (typeSalesData.quantitySold > 0) {
+                typeSalesData.avgCost /= typeSalesData.quantitySold;
+            } else {
+                typeSalesData.avgCost = 0;
+            }
+            
             if (typeSalesData.totalSales !== 0) {
                 typeSalesData.theoreticalCostWomc = (typeSalesData.totalFoodCost / typeSalesData.totalSales) * 100;
                 typeSalesData.theoreticalCostWmc = ((typeSalesData.totalSales - (typeSalesData.totalFoodCost + typeSalesData.totalModifierCost)) / typeSalesData.totalSales) * 100;
             }
 
-            if (typeSalesData.count > 0) {
-                // typeSalesData.avgCost /= typeSalesData.quantitySold;
-                typeSalesData.avgCost /= typeSalesData.count;
-                // typeSalesData.theoreticalCostWomc /= typeSalesData.count;
-                // typeSalesData.theoreticalCostWmc /= typeSalesData.count;
-            }
 
             return typeSalesData;
         });

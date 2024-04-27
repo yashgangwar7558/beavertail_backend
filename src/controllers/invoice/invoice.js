@@ -56,7 +56,7 @@ exports.createInvoice = async (req, res) => {
             }])
 
             res.json({ success: true, invoice })
-            await checkIngredientsThreshold(tenantId, ingredients);
+            await checkIngredientsThreshold(tenantId, ingredients, vendor);
         } else {
             return res.json({
                 success: false,
@@ -205,6 +205,7 @@ exports.updateInvoice = async (req, res) => {
         });
 
         res.json({ success: true, updatedInvoice });
+        await checkIngredientsThreshold(tenantId, ingredients, vendor)
 
     } catch (error) {
         console.error('Error updating invoice:', error.message);

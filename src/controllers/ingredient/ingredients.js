@@ -5,6 +5,7 @@ const Tenant = require('../../models/tenant/tenant');
 const Ingredient = require('../../models/ingredient/ingredients');
 const unitMapping = require('../../models/ingredient/unitmapping')
 const { getConversionFactor } = require('../helper')
+const { createAlert } = require('../../controllers/alert/alert')
 const { log } = require('console');
 
 exports.createIngredient = async (tenantId, name, inventory, invUnit, avgCost, session, category, note, shelfLife, slUnit) => {
@@ -105,10 +106,10 @@ exports.getAllIngredient = async (req, res) => {
 };
 
 
-exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients) => {
+exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients, vendor) => {
     try {
         const ingredients = await Ingredient.find({ tenantId: tenantId });
-        const ingredientsExceedingThreshold = [];
+        // const ingredientsExceedingThreshold = [];
 
         for (const purchaseIngredient of purchasedIngredients) {
             const ingredient = ingredients.find(item => item.name === purchaseIngredient.name);
@@ -128,12 +129,20 @@ exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients) => {
                 const thresholdAmount = convertedLastMedianPrice * (ingredient.threshold / 100);
 
                 if (priceDifference > thresholdAmount) {
-                    ingredientsExceedingThreshold.push({ ...ingredient, priceDifferencePercent, newPurchasePrice })
+                    const details = {
+                        ingredient_name: ingredient.name,
+                        vendor_name: vendor,
+                        median_price: ingredient.medianPurchasePrice,
+                        new_price: newPurchasePrice,
+                        threshold: ingredient.threshold,
+                        percent_change: priceDifferencePercent,
+                    }
+                    await createAlert(tenantId, 'Price_Ingredient', 'Price Hike', details)
                 }
             }
         }
 
-        console.log(ingredientsExceedingThreshold);
+        // console.log(ingredientsExceedingThreshold);
     } catch (error) {
         console.error('Error checking ingredient for threshold:', error.message);
         throw error;
