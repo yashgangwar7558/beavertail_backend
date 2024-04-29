@@ -54,9 +54,8 @@ exports.createInvoice = async (req, res) => {
                 total,
                 invoiceUrl,
             }])
-
             res.json({ success: true, invoice })
-            await checkIngredientsThreshold(tenantId, ingredients, vendor);
+            await checkIngredientsThreshold(tenantId, ingredients, vendor, invoice[0]._id);
         } else {
             return res.json({
                 success: false,
@@ -205,8 +204,7 @@ exports.updateInvoice = async (req, res) => {
         });
 
         res.json({ success: true, updatedInvoice });
-        await checkIngredientsThreshold(tenantId, ingredients, vendor)
-
+        await checkIngredientsThreshold(tenantId, ingredients, vendor, updatedInvoice._id)
     } catch (error) {
         console.error('Error updating invoice:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });

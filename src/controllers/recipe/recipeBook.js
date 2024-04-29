@@ -208,9 +208,11 @@ exports.updateRecipesCostInventory = async (tenantId, recipeId, newInventory, ne
 
 exports.getRecipe = async (req, res) => {
     try {
-        const { recipeId } = req.body;
+        // const { recipeId } = req.body;
+        // const recipe = await Recipe.findById(recipeId);
 
-        const recipe = await Recipe.findById(recipeId);
+        const {tenantId, recipeName} = req.body;
+        const recipe = await Recipe.findOne({ tenantId, name: recipeName })
 
         if (!recipe) {
             return res.json({
@@ -288,39 +290,118 @@ exports.checkRecipesThreshold = async (tenantId, startDate, endDate) => {
         const foodcost_threshold = 30
         const margin_threshold = 30
 
+        const thresholds = {
+            foodCost: {
+                low: 30,
+                medium: 35,
+                critical: 40
+            },
+            margin: {
+                low: 30,
+                medium: 25,
+                critical: 20
+            }
+        };
+
         let details = {}
         for (const recipe of recipesSalesData) {
-            if (recipe.theoreticalCostWomc > foodcost_threshold && recipe.quantitySold != 0) {
-                details = {
-                    item_name: recipe.name,
-                    threshold: foodcost_threshold,
-                    item_foodcost: recipe.theoreticalCostWomc
+            if (recipe.quantitySold !== 0) {
+                if (recipe.theoreticalCostWomc >= thresholds.foodCost.critical) {
+                    details = {
+                        item_name: recipe.name,
+                        threshold: thresholds.foodCost.low,
+                        item_foodcost: recipe.theoreticalCostWomc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'FoodCost_Item', 'High Foodcost', details, 'Critical');
+                } else if (recipe.theoreticalCostWomc >= thresholds.foodCost.medium) {
+                    details = {
+                        item_name: recipe.name,
+                        threshold: thresholds.foodCost.low,
+                        item_foodcost: recipe.theoreticalCostWomc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'FoodCost_Item', 'High Foodcost', details, 'Medium');
+                } else if (recipe.theoreticalCostWomc >= thresholds.foodCost.low) {
+                    details = {
+                        item_name: recipe.name,
+                        threshold: thresholds.foodCost.low,
+                        item_foodcost: recipe.theoreticalCostWomc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'FoodCost_Item', 'High Foodcost', details, 'Low');
                 }
-                await createAlert(tenantId, 'FoodCost_Item', 'High Foodcost', details);
-            } if (recipe.theoreticalCostWmc < margin_threshold && recipe.quantitySold != 0) {
-                details = {
-                    item_name: recipe.name,
-                    threshold: margin_threshold,
-                    item_margin: recipe.theoreticalCostWmc
+            }
+            if (recipe.quantitySold !== 0) {
+                if (recipe.theoreticalCostWmc <= thresholds.foodCost.critical) {
+                    details = {
+                        item_name: recipe.name,
+                        threshold: thresholds.margin.low,
+                        item_margin: recipe.theoreticalCostWmc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'Margin_Item', 'Low Margin', details, 'Critical');
+                } else if (recipe.theoreticalCostWmc <= thresholds.foodCost.medium) {
+                    details = {
+                        item_name: recipe.name,
+                        threshold: thresholds.margin.low,
+                        item_margin: recipe.theoreticalCostWmc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'Margin_Item', 'Low Margin', details, 'Medium');
+                } else if (recipe.theoreticalCostWmc <= thresholds.foodCost.low) {
+                    details = {
+                        item_name: recipe.name,
+                        threshold: thresholds.margin.low,
+                        item_margin: recipe.theoreticalCostWmc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'Margin_Item', 'Low Margin', details, 'Low');
                 }
-                await createAlert(tenantId, 'Margin_Item', 'Low Margin', details);
             }
         }
         for (const type of typesSalesData) {
-            if (type.theoreticalCostWomc > foodcost_threshold && type.quantitySold != 0) {
-                details = {
-                    type_name: type.subType,
-                    threshold: foodcost_threshold,
-                    type_foodcost: type.theoreticalCostWomc
+            if (type.quantitySold !== 0) {
+                if (type.theoreticalCostWomc > thresholds.foodCost.critical) {
+                    details = {
+                        type_name: type.subType,
+                        threshold: thresholds.foodCost.low,
+                        type_foodcost: type.theoreticalCostWomc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'FoodCost_Type', 'High Foodcost', details, 'Critical');
+                } else if (type.theoreticalCostWomc > thresholds.foodCost.medium) {
+                    details = {
+                        type_name: type.subType,
+                        threshold: thresholds.foodCost.low,
+                        type_foodcost: type.theoreticalCostWomc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'FoodCost_Type', 'High Foodcost', details, 'Medium');
+                } else if (type.theoreticalCostWomc > thresholds.foodCost.low) {
+                    details = {
+                        type_name: type.subType,
+                        threshold: thresholds.foodCost.low,
+                        type_foodcost: type.theoreticalCostWomc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'FoodCost_Type', 'High Foodcost', details, 'Low');
                 }
-                await createAlert(tenantId, 'FoodCost_Type', 'High Foodcost', details);
-            } if (type.theoreticalCostWmc < margin_threshold && type.quantitySold != 0) {
-                details = {
-                    type_name: type.subType,
-                    threshold: margin_threshold,
-                    type_margin: type.theoreticalCostWmc
+            }
+            if (type.quantitySold !== 0) {
+                if (type.theoreticalCostWmc < thresholds.foodCost.critical) {
+                    details = {
+                        type_name: type.subType,
+                        threshold: thresholds.margin.low,
+                        type_margin: type.theoreticalCostWmc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'Margin_Type', 'Low Margin', details, 'Critical');
+                } else if (type.theoreticalCostWmc < thresholds.foodCost.medium) {
+                    details = {
+                        type_name: type.subType,
+                        threshold: thresholds.margin.low,
+                        type_margin: type.theoreticalCostWmc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'Margin_Type', 'Low Margin', details, 'Medium');
+                } else if (type.theoreticalCostWmc < thresholds.foodCost.low) {
+                    details = {
+                        type_name: type.subType,
+                        threshold: thresholds.margin.low,
+                        type_margin: type.theoreticalCostWmc.toFixed(2)
+                    }
+                    await createAlert(tenantId, 'Margin_Type', 'Low Margin', details, 'Low');
                 }
-                await createAlert(tenantId, 'Margin_Type', 'Low Margin', details);
             }
         }
 

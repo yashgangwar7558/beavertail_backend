@@ -9,8 +9,8 @@ const {
 
 router.post('/create-alert', async (req, res) => {
     try {
-        const { tenantId, type, name, details } = req.body
-        const alert = await createAlert(tenantId, type, name, details)
+        const { tenantId, type, name, details, severity } = req.body
+        const alert = await createAlert(tenantId, type, name, details, severity)
         res.json({ success: true, message: 'Alert generated successfully!'});
     } catch (error) {
         console.error('Error creating alert', error.message);

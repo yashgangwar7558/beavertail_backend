@@ -15,7 +15,7 @@ exports.formatDate = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-exports.formatMonthYear = (date) => {
+exports.formatMonthYear = async (date) => {
     const options = { month: 'short', year: 'numeric' };
     const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date);
     const [month, year] = formattedDate.split(' ');

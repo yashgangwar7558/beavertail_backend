@@ -2,7 +2,7 @@ const { Alert } = require('../../models/alert/alert');
 const { alertTemplates } = require('../../models/alert/alert');
 const { sendAlert } = require('../../utils/socket')
 
-exports.createAlert = async (tenantId, type, name, details) => {
+exports.createAlert = async (tenantId, type, name, details, severity) => {
     try {
         const { detailsKeys, messageTemplate, reference } = alertTemplates[type];
 
@@ -22,6 +22,7 @@ exports.createAlert = async (tenantId, type, name, details) => {
             name: name,
             details: sanitizedDetails,
             message: message,
+            severity,
             reference: reference,
             read: false
         });

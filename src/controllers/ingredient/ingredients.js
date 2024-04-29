@@ -106,7 +106,7 @@ exports.getAllIngredient = async (req, res) => {
 };
 
 
-exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients, vendor) => {
+exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients, vendor, invoiceId) => {
     try {
         const ingredients = await Ingredient.find({ tenantId: tenantId });
         // const ingredientsExceedingThreshold = [];
@@ -129,15 +129,24 @@ exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients, vendo
                 const thresholdAmount = convertedLastMedianPrice * (ingredient.threshold / 100);
 
                 if (priceDifference > thresholdAmount) {
+                    let severity = 'Low';
+                    const thresholdDifference = priceDifferencePercent - ingredient.threshold;
+                    if (thresholdDifference >= 10) {
+                        severity = 'Critical';
+                    } else if (thresholdDifference >= 5) {
+                        severity = 'Medium';
+                    }
+
                     const details = {
                         ingredient_name: ingredient.name,
+                        invoice_id: invoiceId,
                         vendor_name: vendor,
-                        median_price: ingredient.medianPurchasePrice,
-                        new_price: newPurchasePrice,
+                        median_price: ingredient.medianPurchasePrice.toFixed(2),
+                        new_price: newPurchasePrice.toFixed(2),
                         threshold: ingredient.threshold,
-                        percent_change: priceDifferencePercent,
+                        percent_change: priceDifferencePercent.toFixed(2),
                     }
-                    await createAlert(tenantId, 'Price_Ingredient', 'Price Hike', details)
+                    await createAlert(tenantId, 'Price_Ingredient', 'Price Hike', details, severity)
                 }
             }
         }

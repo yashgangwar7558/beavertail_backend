@@ -7,7 +7,7 @@ const { getBillsBetweenDates } = require('../sales/sales')
 const { getAllTypes } = require('../recipe/types')
 const { findAverageCostForRecipeInDateRange } = require('../recipe/recipeCostHistory')
 const { findAverageModifierCostForRecipeInDateRange } = require('../recipe/modifierCostHistory')
-const { formatDate, formatMonthYear } = require('../helper');
+// const { formatDate, formatMonthYear } = require('../helper');
 
 exports.createSalesHistory = async (tenantId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, total, session) => {
     try {
@@ -396,6 +396,17 @@ exports.monthWiseSalesExpenseProfit = async (req, res) => {
         console.error('Error calculating month wise sales, expense and profit data:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
+}
+
+const formatMonthYear = (date) => {
+    const options = { month: 'short', year: 'numeric' };
+    const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date);
+    const [month, year] = formattedDate.split(' ');
+    const lastTwoDigitsOfYear = year.slice(-2);
+
+    const formattedResult = `${month}-${lastTwoDigitsOfYear}`;
+
+    return formattedResult;
 }
 
 
