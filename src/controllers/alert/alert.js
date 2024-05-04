@@ -4,16 +4,16 @@ const { sendAlert } = require('../../utils/socket')
 
 exports.createAlert = async (tenantId, type, name, details, severity) => {
     try {
-        const { detailsKeys, messageTemplate, reference } = alertTemplates[type];
+        const { detailsKeys, messageTemplate, reference } = alertTemplates[type]
 
         const sanitizedDetails = Object.keys(details)
             .filter(key => detailsKeys.includes(key))
             .reduce((obj, key) => {
-                obj[key] = details[key];
-                return obj;
-            }, {});
+                obj[key] = details[key]
+                return obj
+            }, {})
 
-        const message = messageTemplate(sanitizedDetails);
+        const message = messageTemplate(sanitizedDetails)
 
         const alert = new Alert({
             tenantId: tenantId,
@@ -24,22 +24,22 @@ exports.createAlert = async (tenantId, type, name, details, severity) => {
             message: message,
             severity,
             reference: reference,
-            read: false
-        });
+            active: true
+        })
 
-        await alert.save();
-        sendAlert(alert);
+        await alert.save()
+        sendAlert(alert)
         return alert
     } catch (err) {
-        console.error('Error generating alert:', err.message);
+        console.error('Error generating alert:', err.message)
         throw error
     }
 }
 
 exports.getAlerts = async (req, res) => {
     try {
-        const { tenantId } = req.body
-        const alerts = await Alert.find({ tenantId }).sort({ date: -1 });
+        const { tenantId, active } = req.body
+        const alerts = await Alert.find({ tenantId, active }).sort({ date: -1 });
         res.json({ success: true, alerts });
     } catch (err) {
         console.error('Error fetching alerts:', err.message);
@@ -47,13 +47,13 @@ exports.getAlerts = async (req, res) => {
     }
 }
 
-exports.updateReadStatus = async (req, res) => {
+exports.updateActiveStatus = async (req, res) => {
     try {
-        const { tenantId, alertId } = req.body
+        const { tenantId, alertId, active } = req.body
 
         const updatedAlert = await Alert.findOneAndUpdate(
             { _id: alertId, tenantId },
-            { read: true },
+            { active: active },
             { new: true } 
         );
 

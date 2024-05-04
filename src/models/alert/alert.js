@@ -10,7 +10,7 @@ const alertsSchema = new mongoose.Schema({
     message: { type: String, required: true },
     severity: { type: String, required: true },
     reference: { type: String, required: true },
-    read: { type: Boolean, required: true, default: false },
+    active: { type: Boolean, required: true, default: true },
 });
 
 const alertTemplates = {
@@ -20,13 +20,13 @@ const alertTemplates = {
         reference: '/ingredients'
     },
     'FoodCost_Type': {
-        detailsKeys: ['type_name', 'threshold', 'type_foodcost'],
-        messageTemplate: (details) => `${details.type_name} crossed its threshold foodcost of ${details.threshold}%. Current foodcost is ${details.type_foodcost}%`, 
+        detailsKeys: ['type_name', 'threshold', 'type_foodCost'],
+        messageTemplate: (details) => `${details.type_name} crossed its threshold foodcost of ${details.threshold}%. Current foodcost is ${details.type_foodCost}%`, 
         reference: '/foodcost'
     },
     'FoodCost_Item': {
-        detailsKeys: ['item_name', 'threshold', 'item_foodcost'],
-        messageTemplate: (details) => `${details.item_name} crossed its threshold foodcost of ${details.threshold}%. Current foodcost is ${details.item_foodcost}%`, 
+        detailsKeys: ['item_name', 'threshold', 'item_foodCost'],
+        messageTemplate: (details) => `${details.item_name} crossed its threshold foodcost of ${details.threshold}%. Current foodcost is ${details.item_foodCost}%`, 
         reference: '/foodcost'
     },
     'Margin_Type': {

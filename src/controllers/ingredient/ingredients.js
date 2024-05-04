@@ -4,6 +4,7 @@ const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const Ingredient = require('../../models/ingredient/ingredients');
 const unitMapping = require('../../models/ingredient/unitmapping')
+const { Alert } = require('../../models/alert/alert')
 const { getConversionFactor } = require('../helper')
 const { createAlert } = require('../../controllers/alert/alert')
 const { log } = require('console');
@@ -128,6 +129,8 @@ exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients, vendo
                 const priceDifferencePercent = (priceDifference / convertedLastMedianPrice) * 100
                 const thresholdAmount = convertedLastMedianPrice * (ingredient.threshold / 100);
 
+                const existingAlert = await Alert.findOne({ tenantId, 'details.invoice_id': invoiceId, 'details.ingredient_name': ingredient.name, active: true })
+
                 if (priceDifference > thresholdAmount) {
                     let severity = 'Low';
                     const thresholdDifference = priceDifferencePercent - ingredient.threshold;
@@ -146,7 +149,17 @@ exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients, vendo
                         threshold: ingredient.threshold,
                         percent_change: priceDifferencePercent.toFixed(2),
                     }
-                    await createAlert(tenantId, 'Price_Ingredient', 'Price Hike', details, severity)
+
+                    if (existingAlert) {
+                        await Alert.findByIdAndDelete(existingAlert._id);
+                        await createAlert(tenantId, 'Price_Ingredient', 'Price Hike', details, severity)
+                    } else {
+                        await createAlert(tenantId, 'Price_Ingredient', 'Price Hike', details, severity);
+                    }
+                } else {
+                    if (existingAlert) {
+                        await Alert.findByIdAndUpdate(existingAlert._id, { $set: { active: false } });
+                    }
                 }
             }
         }

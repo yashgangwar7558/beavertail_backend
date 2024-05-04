@@ -4,7 +4,7 @@ const router = express.Router();
 const {
     createAlert,
     getAlerts,
-    updateReadStatus
+    updateActiveStatus
 } = require('../../controllers/alert/alert')
 
 router.post('/create-alert', async (req, res) => {
@@ -19,7 +19,7 @@ router.post('/create-alert', async (req, res) => {
 });
 
 router.post('/get-alerts', getAlerts)
-router.post('/update-read-status', updateReadStatus)
+router.post('/update-active-status', updateActiveStatus)
 
 module.exports = router;
 

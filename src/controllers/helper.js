@@ -12,7 +12,7 @@ exports.formatDate = (date) => {
     const year = date.getFullYear();
 
     // return `${day}-${month}-${year}`;
-    return `${year}-${month}-${day}`;
+    return `${month}/${day}/${year}`;
 };
 
 exports.formatMonthYear = async (date) => {

@@ -52,7 +52,7 @@ exports.validateUserSignUp = [
     .not()
     .isEmpty()
     .withMessage('Mobile number is required!')
-    .isMobilePhone('any', { strictMode: false }) 
+    .isMobilePhone('any', { strictMode: false })
     .withMessage('Invalid mobile number!'),
   // check('address')
   //   .trim()
@@ -67,12 +67,20 @@ exports.validateUserSignUp = [
 ];
 
 exports.validateUserSignIn = [
-  check('username').trim().not().isEmpty().withMessage('username / password is required!'),
+  check('username')
+    .trim()
+    .not()
+    .isEmpty()
+    .withMessage('Username is required!')
+    .custom(value => !/\s/.test(value))
+    .withMessage('Invalid Username!'),
   check('password')
     .trim()
     .not()
     .isEmpty()
-    .withMessage('username / password is required!'),
+    .withMessage('Password is required!')
+    .custom(value => !/\s/.test(value))
+    .withMessage('Invalid Password!')
 ];
 
 exports.userValidation = (req, res, next) => {

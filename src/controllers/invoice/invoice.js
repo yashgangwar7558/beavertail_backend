@@ -80,70 +80,70 @@ exports.extractInvoiceData = async (req, res) => {
                         name: 'Cottage cheese',
                         quantity: 2,
                         unit: 'piece',
-                        unitPrice: 6.75,
+                        unitPrice: '26.98',
                         total: '53.96'
                     },
                     {
                         name: 'Peeled Garlic',
                         quantity: 1,
                         unit: 'piece',
-                        unitPrice: 9.01,
+                        unitPrice: '9.01',
                         total: '9.01'
                     },
                     {
                         name: 'KE SLCD BCN',
                         quantity: 2,
                         unit: 'piece',
-                        unitPrice: 34.05,
+                        unitPrice: '34.85',
                         total: '69.70'
                     },
                     {
                         name: 'Curly Lasagna',
                         quantity: 1,
                         unit: 'piece',
-                        unitPrice: 12.43,
+                        unitPrice: '12.43',
                         total: '12.43'
                     },
                     {
                         name: 'Jalapeno Peppers',
                         quantity: 1,
                         unit: 'piece',
-                        unitPrice: 3.90,
+                        unitPrice: '23.87',
                         total: '23.87'
                     },
                     {
                         name: 'Red Pepper',
                         quantity: 1,
                         unit: 'piece',
-                        unitPrice: 27.40,
+                        unitPrice: '27.48',
                         total: '27.48'
                     },
                     {
                         name: 'Shell Taco',
                         quantity: 2,
                         unit: 'piece',
-                        unitPrice: 1.33,
+                        unitPrice: '10.62',
                         total: '21.24'
                     },
                     {
                         name: 'Bacon Crumbles',
                         quantity: 1,
                         unit: 'piece',
-                        unitPrice: 5.37,
+                        unitPrice: '64.40',
                         total: '64.40'
                     },
                     {
                         name: 'Triumph 1# PPR',
                         quantity: 2,
                         unit: 'piece',
-                        unitPrice: 7.97,
+                        unitPrice: '31.90',
                         total: '63.80'
                     },
                     {
                         name: 'Triumph 1# PPR',
                         quantity: 2,
                         unit: 'piece',
-                        unitPrice: 15.70,
+                        unitPrice: '31.40',
                         total: '62.80'
                     },
                 ],
