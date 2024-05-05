@@ -6,7 +6,7 @@ const bcrypt = require('bcrypt');
 
 exports.createUser = async (req, res) => {
     try {
-        const { username, password, firstName, lastName, email, mobileNo, address, rolesAssigned, tenantId, status } = req.body
+        const { username, password, firstName, lastName, email, mobileNo, address, roles, tenantId, status } = req.body
         const isNewUser1 = await User.isThisEmailInUse(email)
         const isNewUser2 = await User.isThisMobileNoInUse(mobileNo)
         const isNewUser3 = await User.isThisUsernameInUse(username)
@@ -28,7 +28,7 @@ exports.createUser = async (req, res) => {
             });
         }
 
-        const formattedRoles = rolesAssigned.map(role => ({
+        const formattedRoles = roles.map(role => ({
             roleName: role.roleName,
             roleId: role._id,
         })) || [];
