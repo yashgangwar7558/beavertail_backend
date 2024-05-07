@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
     recipeWiseSalesDataBetweenDates,
+    mainTypeWiseSalesDataBetweenDates,
     typeWiseSalesDataBetweenDates,
     typeWiseRecipeSalesDataBetweenDates,
     monthWiseRecipeSalesData,
@@ -34,6 +35,18 @@ router.post('/get-typewise-sales', async (req, res) => {
         res.json({ success: true, allTypesSalesData });
     } catch (error) {
         console.error('Error fetching type wise sales history:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+router.post('/get-maintypewise-sales', async (req, res) => {
+    try {
+        // const { Types } = req
+        const { tenantId, startDate, endDate } = req.body
+        const allMainTypesSalesData = await mainTypeWiseSalesDataBetweenDates(tenantId, startDate, endDate)
+        res.json({ success: true, allMainTypesSalesData });
+    } catch (error) {
+        console.error('Error fetching main type wise sales history:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 });

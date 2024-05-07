@@ -319,6 +319,53 @@ exports.getAllInvoiceBwDates = async (req, res) => {
     }
 };
 
+exports.getPerDayInvoicesBwDates = async (req, res) => {
+    try {
+        const { tenantId, startDate, endDate } = req.body;
+
+        const tenant = await Tenant.findById(tenantId);
+
+        if (!tenant) {
+            return res.json({
+                success: false,
+                message: 'Tenant not found!',
+            });
+        }
+
+        const query = {
+            tenantId: tenant._id,
+            invoiceDate: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        };
+
+        const invoices = await Invoice.find(query);
+
+        const allDates = generateDateRange(startDate, endDate);
+
+        const invoicesSummary = allDates.reduce((summary, date) => {
+            const formattedDate = formatDate(date);
+            summary[formattedDate] = { count: 0, total: 0 };
+            return summary;
+        }, {});
+
+        invoices.forEach(invoice => {
+            const date = formatDate(invoice.invoiceDate);
+            invoicesSummary[date].count++;
+            invoicesSummary[date].total += parseFloat(invoice.total);
+        });
+
+        const formattedInvoices = Object.entries(invoicesSummary).map(([date, { count, total }]) => ({
+            date,
+            invoiceCount: count,
+            invoiceValue: total
+        }));
+
+        res.json({ success: true, invoices: formattedInvoices });
+    } catch (error) {
+        console.error('Error fetching invoices:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
 exports.getVendorsTotalBwDates = async (req, res) => {
     try {
         const { tenantId, startDate, endDate } = req.body;
@@ -357,3 +404,14 @@ exports.getVendorsTotalBwDates = async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
+
+const generateDateRange = (startDate, endDate) => {
+    const dates = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= new Date(endDate)) {
+        dates.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1)
+    }
+    return dates;
+}
+

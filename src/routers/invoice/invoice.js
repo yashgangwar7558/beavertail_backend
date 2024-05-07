@@ -6,6 +6,7 @@ const {
     updateInvoiceStatus,
     getInvoice,
     getAllInvoiceBwDates,
+    getPerDayInvoicesBwDates,
     getVendorsTotalBwDates,
     createInvoice,
     updateInvoice,
@@ -25,6 +26,7 @@ router.post('/update-invoice-status', updateInvoiceStatus);
 router.post('/delete-invoice', deleteInvoice);
 router.post('/get-invoice', getInvoice);
 router.post('/get-invoices', getAllInvoiceBwDates);
+router.post('/get-perday-invoices', getPerDayInvoicesBwDates);
 router.post('/get-vendors-total', getVendorsTotalBwDates);
 
 module.exports = router;

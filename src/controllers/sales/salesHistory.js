@@ -123,6 +123,67 @@ exports.recipeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) =
     }
 }
 
+exports.mainTypeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => {
+    try {
+        // Recipe wise sales data 
+        const allRecipesSalesData = await exports.recipeWiseSalesDataBetweenDates(tenantId, startDate, endDate)
+        const recipeTypes = ['Food', 'Beverage']
+
+        // Type wise sales data
+        const allMainTypesSalesData = recipeTypes.map((type) => {
+            const typeRecipes = allRecipesSalesData.filter((recipe) => recipe.type === type);
+
+            const typeSalesData = {
+                type,
+                count: 0,
+                avgCost: 0,
+                quantitySold: 0,
+                totalFoodCost: 0,
+                totalModifierCost: 0,
+                totalSales: 0,
+                totalProfitWomc: 0,
+                totalProfitWmc: 0,
+                theoreticalCostWomc: 0,
+                theoreticalCostWmc: 0
+            };
+
+            typeRecipes.forEach((recipe) => {
+                typeSalesData.count++;
+                typeSalesData.avgCost += (recipe.avgCost * recipe.quantitySold);
+                // typeSalesData.avgCost += (recipe.avgCost);
+                typeSalesData.quantitySold += recipe.quantitySold;
+                typeSalesData.totalFoodCost += recipe.totalFoodCost;
+                typeSalesData.totalModifierCost += recipe.totalModifierCost;
+                typeSalesData.totalSales += recipe.totalSales;
+                typeSalesData.totalProfitWomc += recipe.totalProfitWomc;
+                typeSalesData.totalProfitWmc += recipe.totalProfitWmc;
+                typeSalesData.theoreticalCostWomc += recipe.theoreticalCostWomc;
+                typeSalesData.theoreticalCostWmc += recipe.theoreticalCostWmc;
+            });
+
+            if (typeSalesData.quantitySold > 0) {
+                typeSalesData.avgCost /= typeSalesData.quantitySold;
+            } else {
+                typeSalesData.avgCost = 0;
+            }
+            
+            if (typeSalesData.totalSales !== 0) {
+                typeSalesData.theoreticalCostWomc = (typeSalesData.totalFoodCost / typeSalesData.totalSales) * 100;
+                typeSalesData.theoreticalCostWmc = ((typeSalesData.totalSales - (typeSalesData.totalFoodCost + typeSalesData.totalModifierCost)) / typeSalesData.totalSales) * 100;
+            }
+
+
+            return typeSalesData;
+        });
+
+        return allMainTypesSalesData;
+
+    } catch (error) {
+        console.error('Error fetching main types wise sales info between dates:', error.message);
+        throw error
+    }
+}
+
 exports.typeWiseSalesDataBetweenDates = async (tenantId, startDate, endDate) => {
     try {
         // Recipe wise sales data 
@@ -274,7 +335,7 @@ exports.monthWiseTypeSalesData = async (req, res) => {
             const monthStartDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth(), 1);
             const monthEndDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth() + 1, 0);
 
-            const salesData = await exports.typeWiseSalesDataBetweenDates(tenantId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
+            const salesData = await exports.mainTypeWiseSalesDataBetweenDates(tenantId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
             const monthyear = await formatMonthYear(monthStartDate)
 
             monthWiseSalesData.push({
@@ -333,7 +394,7 @@ exports.salesExpenseProfitBetweenDates = async (req, res) => {
         for (const recipeData of recipeSalesData) {
             totalSales += recipeData.totalSales;
             totalExpense += recipeData.totalFoodCost
-            totalProfit += recipeData.totalProfitWmc;
+            totalProfit += recipeData.totalProfitWomc;
         }
 
         res.json({
@@ -375,7 +436,7 @@ exports.monthWiseSalesExpenseProfit = async (req, res) => {
             for (const recipeData of recipeSalesData) {
                 totalSales += recipeData.totalSales;
                 totalExpense += recipeData.totalFoodCost
-                totalProfit += recipeData.totalProfitWmc;
+                totalProfit += recipeData.totalProfitWomc;
             }
 
             monthWiseData.push({
