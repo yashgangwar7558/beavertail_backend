@@ -4,16 +4,25 @@ const Role = require('../../models/user/role')
 
 exports.createRole = async (req, res) => {
     try {
-        const {roleName, roleDescription, featureIds, roleTag} = req.body
+        const { tenantId, roleName, roleDescription, featureIds, roleTag } = req.body
 
-        if (!roleName || !roleDescription || !featureIds || !roleTag) {
+        if (!tenantId || !roleName || !roleDescription || !featureIds || !roleTag) {
             return res.json({
                 success: false,
                 message: 'Some required fields are missing!',
             });
         }
 
+        const existingRole = await Role.findOne({ tenantId, roleName });
+        if (existingRole) {
+            return res.json({
+                success: false,
+                message: `Role with name '${roleName}' already exists for this tenant!`,
+            });
+        }
+
         const role = await Role.create({
+            tenantId,
             roleName,
             roleDescription,
             featureIds,
@@ -29,9 +38,9 @@ exports.createRole = async (req, res) => {
 
 exports.getRole = async (req, res) => {
     try {
-        const { roleId } = req.body;
+        const { tenantId, roleName } = req.body;
 
-        const role = await Role.findById(roleId);
+        const role = await Role.find({ tenantId: tenantId, roleName: roleName });
 
         if (!role) {
             return res.json({
@@ -47,14 +56,17 @@ exports.getRole = async (req, res) => {
     }
 };
 
-exports.getAllRoles = async (req, res) => {
+exports.getTenantRoles = async (req, res) => {
     try {
-        const roles = await Role.find({});
+
+        const { tenantId } = req.body
+
+        const roles = await Role.find({ tenantId: tenantId });
 
         if (roles.length == 0) {
             return res.json({
                 success: false,
-                message: 'No roles found!',
+                message: 'No roles found for this tenant!',
             });
         }
 

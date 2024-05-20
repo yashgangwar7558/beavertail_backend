@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const roleSchema = new mongoose.Schema({
+    tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Tenant' },
     roleName: {
         type: String,
         required: true,
-        unique: true,
     },
     roleDescription: {
         type: String,
@@ -17,7 +17,6 @@ const roleSchema = new mongoose.Schema({
     }],
     roleTag: {
         type: String,
-        unique: true,
         required: true
     }
 });
