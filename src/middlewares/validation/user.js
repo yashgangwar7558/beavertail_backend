@@ -8,15 +8,17 @@ exports.validateUserSignUp = [
     .withMessage('Username is required!')
     .isLength({ min: 5 })
     .withMessage('Username must be at least 5 characters long')
-    .matches(/^[a-zA-Z0-9_-]+$/)
-    .withMessage('Username can only contain letters, numbers, underscores, and dashes'),
+    .matches(/^[A-Z][a-zA-Z0-9_-]*$/)
+    .withMessage('Username must start with a capital letter and can only contain letters, numbers, underscores, and dashes'),
   check('password')
     .trim()
     .not()
     .isEmpty()
     .withMessage('Password is empty!')
     .isLength({ min: 8, max: 20 })
-    .withMessage('Password must be 8 to 20 characters long!'),
+    .withMessage('Password must be 8 to 20 characters long!')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Z][a-zA-Z\d@$!%*?&]{7,19}$/)
+    .withMessage('Password must start with a capital letter, and should contain upper and lower case letters, numbers, and special characters'),
   check('confirmPassword')
     .trim()
     .not()
@@ -84,9 +86,9 @@ exports.validateUserSignIn = [
 ];
 
 exports.userValidation = (req, res, next) => {
-  const result = validationResult(req).array();
-  if (!result.length) return next();
+  const result = validationResult(req).array()
+  if (!result.length) return next()
 
-  const error = result[0].msg;
-  res.json({ success: false, message: error });
-};
+  const error = result[0].msg
+  res.json({ success: false, message: error })
+}

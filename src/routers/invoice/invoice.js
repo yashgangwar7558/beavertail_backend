@@ -16,10 +16,16 @@ const {
 
 const { isAuth } = require('../../middlewares/auth');
 
+const {
+    invoiceValidation,
+    validateInvoice,
+    parseIngredients
+  } = require('../../middlewares/validation/invoice')
+
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage })
 
-router.post('/create-invoice', upload.single('invoiceFile'), createInvoice);
+router.post('/create-invoice', upload.single('invoiceFile'), parseIngredients, validateInvoice, invoiceValidation, createInvoice);
 router.post('/extract-invoice-data', upload.single('invoiceFile'), extractInvoiceData);
 router.post('/update-invoice', upload.none(), updateInvoice);
 router.post('/update-invoice-status', updateInvoiceStatus);

@@ -9,23 +9,23 @@ const { log } = require('console');
 exports.createInvoice = async (req, res) => {
     try {
         const { tenantId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body;
-        const ingredients = JSON.parse(req.body.ingredients);
-        const missingFields = [];
+        // const ingredients = JSON.parse(req.body.ingredients);
+        // const missingFields = [];
 
-        if (!tenantId) missingFields.push('User unauthenticated');
-        if (!invoiceNumber) missingFields.push('Invoice Number');
-        if (!vendor) missingFields.push('Vendor Name');
-        if (!invoiceDate) missingFields.push('Invoice Date');
-        if (ingredients.length == 0) missingFields.push('Ingredients');
-        if (!payment) missingFields.push('Payment Mode');
-        if (!total) missingFields.push('Total Amount');
+        // if (!tenantId) missingFields.push('User unauthenticated');
+        // if (!invoiceNumber) missingFields.push('Invoice Number');
+        // if (!vendor) missingFields.push('Vendor Name');
+        // if (!invoiceDate) missingFields.push('Invoice Date');
+        // if (ingredients.length == 0) missingFields.push('Ingredients');
+        // if (!payment) missingFields.push('Payment Mode');
+        // if (!total) missingFields.push('Total Amount');
 
-        if (missingFields.length > 0) {
-            return res.json({
-                success: false,
-                message: `Missing fields: ${missingFields.join(', ')}`,
-            });
-        }
+        // if (missingFields.length > 0) {
+        //     return res.json({
+        //         success: false,
+        //         message: `Missing fields: ${missingFields.join(', ')}`,
+        //     });
+        // }
 
         if (req.file) {
             const { buffer } = req.file;
