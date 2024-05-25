@@ -62,7 +62,7 @@ exports.userSignIn = async (req, res) => {
         if (!user)
             return res.json({
                 success: false,
-                message: 'user not found, with the given username!',
+                message: 'No user exists, with the given username!',
             });
 
         const isMatch = await user.comparePassword(password);
