@@ -75,13 +75,13 @@ exports.userSignIn = async (req, res) => {
         switch (user.status) {
             case 'approved':
                 const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
-                    expiresIn: '2m',
+                    expiresIn: '1d',
                 });
 
                 let oldTokens = user.tokens || [];
 
                 if (oldTokens.length) {
-                    oldTokens = oldTokens.filter(t => (Date.now() - parseInt(t.signedAt)) / 1000 < 120); // 86400
+                    oldTokens = oldTokens.filter(t => (Date.now() - parseInt(t.signedAt)) / 1000 < 86400); // 86400
                 }
 
                 await User.findByIdAndUpdate(user._id, {
