@@ -75,13 +75,13 @@ exports.userSignIn = async (req, res) => {
         switch (user.status) {
             case 'approved':
                 const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
-                    expiresIn: '1d',
+                    expiresIn: '2m',
                 });
 
                 let oldTokens = user.tokens || [];
 
                 if (oldTokens.length) {
-                    oldTokens = oldTokens.filter(t => (Date.now() - parseInt(t.signedAt)) / 1000 < 86400);
+                    oldTokens = oldTokens.filter(t => (Date.now() - parseInt(t.signedAt)) / 1000 < 120); // 86400
                 }
 
                 await User.findByIdAndUpdate(user._id, {
@@ -146,11 +146,12 @@ exports.userSignOut = async (req, res) => {
         }
 
         const tokens = req.user.tokens;
-        console.log(token);
 
         const newTokens = tokens.filter(t => t.token !== token);
         await User.findByIdAndUpdate(req.user._id, { tokens: newTokens });
         res.json({ success: true, message: 'Sign out successfully!' });
+    } else {
+        res.json({ success: false, message: 'Authorization header not found!' });
     }
 }
 
