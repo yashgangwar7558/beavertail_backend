@@ -1,6 +1,6 @@
 const { check, validationResult } = require('express-validator')
 
-exports.parseIngredients = (req, res, next) => {
+exports.parseInvoiceIngredients = (req, res, next) => {
     try {
         if (req.body.ingredients) {
             req.body.ingredients = JSON.parse(req.body.ingredients);

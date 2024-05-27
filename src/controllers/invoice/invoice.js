@@ -8,24 +8,7 @@ const { log } = require('console');
 
 exports.createInvoice = async (req, res) => {
     try {
-        const { tenantId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body;
-        // const ingredients = JSON.parse(req.body.ingredients);
-        // const missingFields = [];
-
-        // if (!tenantId) missingFields.push('User unauthenticated');
-        // if (!invoiceNumber) missingFields.push('Invoice Number');
-        // if (!vendor) missingFields.push('Vendor Name');
-        // if (!invoiceDate) missingFields.push('Invoice Date');
-        // if (ingredients.length == 0) missingFields.push('Ingredients');
-        // if (!payment) missingFields.push('Payment Mode');
-        // if (!total) missingFields.push('Total Amount');
-
-        // if (missingFields.length > 0) {
-        //     return res.json({
-        //         success: false,
-        //         message: `Missing fields: ${missingFields.join(', ')}`,
-        //     });
-        // }
+        const { tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total } = req.body;
 
         if (req.file) {
             const { buffer } = req.file;
@@ -38,6 +21,17 @@ exports.createInvoice = async (req, res) => {
 
             if (!invoiceUrl) {
                 throw new Error('Error uploading file to S3');
+            }
+
+            const existingInvoice = await Invoice.findOne({ invoiceNumber, tenantId });
+
+            if (existingInvoice &&
+                existingInvoice.status.type !== 'Approval-Rejected' &&
+                existingInvoice.status.type !== 'Review-Rejected') {
+                return res.json({
+                    success: false,
+                    message: 'Invoice already exists! You can\'t upload the same invoice until it\'s Rejected.',
+                });
             }
 
             const invoice = await Invoice.create([{
@@ -167,26 +161,7 @@ exports.extractInvoiceData = async (req, res) => {
 
 exports.updateInvoice = async (req, res) => {
     try {
-        const { invoiceId, tenantId, invoiceNumber, vendor, invoiceDate, payment, statusType, total } = req.body
-        const ingredients = JSON.parse(req.body.ingredients);
-
-        const missingFields = [];
-
-        if (!tenantId) missingFields.push('User unauthenticated');
-        if (!invoiceId) missingFields.push('Invoice does not exist');
-        if (!invoiceNumber) missingFields.push('Invoice Number');
-        if (!vendor) missingFields.push('Vendor Name');
-        if (!invoiceDate) missingFields.push('Invoice Date');
-        if (ingredients.length == 0) missingFields.push('Ingredients');
-        if (!payment) missingFields.push('Payment Mode');
-        if (!total) missingFields.push('Total Amount');
-
-        if (missingFields.length > 0) {
-            return res.json({
-                success: false,
-                message: `Missing fields: ${missingFields.join(', ')}`,
-            });
-        }
+        const { invoiceId, tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total } = req.body
 
         const updatedInvoice = await Invoice.findByIdAndUpdate(invoiceId, {
             invoiceNumber,
