@@ -163,6 +163,14 @@ exports.updateInvoice = async (req, res) => {
     try {
         const { invoiceId, tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total } = req.body
 
+        const existingInvoice = await Invoice.findById(invoiceId)
+        if (!existingInvoice) {
+            return res.json({
+                success: false,
+                message: 'Invoice does not exist',
+            })
+        }
+
         const updatedInvoice = await Invoice.findByIdAndUpdate(invoiceId, {
             invoiceNumber,
             vendor,

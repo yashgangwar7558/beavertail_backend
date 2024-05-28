@@ -1,9 +1,9 @@
 const { check, validationResult } = require('express-validator')
 
-exports.parseRecipeIngredients = (req, res, next) => {
+exports.parseRecipeYields = (req, res, next) => {
     try {
-        if (req.body.ingredients) {
-            req.body.ingredients = JSON.parse(req.body.ingredients);
+        if (req.body.yields) {
+            req.body.yields = JSON.parse(req.body.yields);
         }
         next();
     } catch (error) {
@@ -11,10 +11,10 @@ exports.parseRecipeIngredients = (req, res, next) => {
     }
 }
 
-exports.parseRecipeYields = (req, res, next) => {
+exports.parseRecipeIngredients = (req, res, next) => {
     try {
-        if (req.body.yields) {
-            req.body.yields = JSON.parse(req.body.yields);
+        if (req.body.ingredients) {
+            req.body.ingredients = JSON.parse(req.body.ingredients);
         }
         next();
     } catch (error) {
@@ -29,23 +29,45 @@ exports.validateRecipe = [
         .isEmpty()
         .withMessage('User unauthenticated. Try relogin'),
 
-    check('invoiceNumber')
+    check('name')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Invoice number is required'),
+        .withMessage('Recipe Name is required'),
 
-    check('vendor')
+    check('category')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Vendor name is required'),
+        .withMessage('Type is required'),
 
-    check('invoiceDate')
+    check('subCategory')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Invoice date is required'),
+        .withMessage('Sub Type is required'),
+
+    check('yields')
+        .isArray({ min: 1 })
+        .withMessage('Add atleast one yield'),
+
+    check('yields.*.quantity')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Yield Quantity is required'),
+
+    check('yields.*.unit')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Yield Unit is required'),
+
+    check('methodPrep')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Method of Preperation is required'),
 
     check('ingredients')
         .isArray({ min: 1 })
@@ -55,43 +77,43 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Ingredient name is required'),
+        .withMessage('Ingredient Name is required'),
+
+    check('ingredients.*.category')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Ingredient Category is required'),
 
     check('ingredients.*.quantity')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Quantity is required'),
+        .withMessage('Ingredient Quantity is required'),
 
     check('ingredients.*.unit')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Unit is required'),
+        .withMessage('Ingredient Unit is required'),
 
-    check('ingredients.*.unitPrice')
+    check('modifierCost')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Unit price is required'),
+        .withMessage('Additional Cost is required'),
 
-    check('ingredients.*.total')
+    check('menuPrice')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Ingredient total is required'),
+        .withMessage('Menu Price is required'),
 
-    check('payment')
+    check('menuType')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Payment mode is required'),
-
-    check('total')
-        .trim()
-        .not()
-        .isEmpty()
-        .withMessage('Total amount is required'),
+        .withMessage('Menu Type is required'),
 ]
 
 exports.recipeValidation = (req, res, next) => {

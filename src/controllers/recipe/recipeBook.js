@@ -14,7 +14,7 @@ const { createAlert } = require('../../controllers/alert/alert')
 
 exports.createRecipe = async (req, res) => {
     try {
-        const { tenantId, name, category, subCategory, methodPrep, modifierCost, menuPrice, menuType } = req.body;
+        const { tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body;
         // const ingredients = JSON.parse(req.body.ingredients)
         // const yields = JSON.parse(req.body.yields)
 
@@ -38,6 +38,15 @@ exports.createRecipe = async (req, res) => {
         //     });
         // }
 
+        const existingRecipe = await Recipe.findOne({ name, tenantId });
+
+        if (existingRecipe) {
+            return res.json({
+                success: false,
+                message: 'Recipe already exists!',
+            });
+        }
+
         // Calculate cost and inventory as per ingredients table and stock
         const AllIngredients = await Ingredient.find({ tenantId });
         const UnitMaps = await unitMapping.find({ tenantId });
@@ -53,8 +62,8 @@ exports.createRecipe = async (req, res) => {
             const fileType = req.file.mimetype
             const bucketName = process.env.BUCKET_NAME
             const folderPath = 'recipes'
-            const imageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
-            // const imageUrl = 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8ZG9zYXxlbnwwfHwwfHx8MA%3D%3D'
+            // const imageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
+            const imageUrl = 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8ZG9zYXxlbnwwfHwwfHx8MA%3D%3D'
 
             const recipe = await Recipe.create({
                 tenantId,
@@ -90,7 +99,7 @@ exports.createRecipe = async (req, res) => {
 
 exports.updateRecipe = async (req, res) => {
     try {
-        const { recipeId, imageUrl, tenantId, name, category, subCategory, methodPrep, modifierCost, menuPrice, menuType } = req.body;
+        const { recipeId, imageUrl, tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body;
         // const ingredients = JSON.parse(req.body.ingredients)
         // const yields = JSON.parse(req.body.yields)
 
@@ -109,11 +118,19 @@ exports.updateRecipe = async (req, res) => {
         // if (!yields) missingFields.push('Yields');
         // if (ingredients.length == 0) missingFields.push('Ingredients');
 
-        if (missingFields.length > 0) {
+        // if (missingFields.length > 0) {
+        //     return res.json({
+        //         success: false,
+        //         message: `Missing fields: ${missingFields.join(', ')}`,
+        //     });
+        // }
+
+        const existingRecipe = await Recipe.findById(recipeId)
+        if (!existingRecipe) {
             return res.json({
                 success: false,
-                message: `Missing fields: ${missingFields.join(', ')}`,
-            });
+                message: 'Recipe does not exist',
+            })
         }
 
         // Calculate cost and inventory as per ingredients table and stock
@@ -212,7 +229,7 @@ exports.getRecipe = async (req, res) => {
         // const { recipeId } = req.body;
         // const recipe = await Recipe.findById(recipeId);
 
-        const {tenantId, recipeName} = req.body;
+        const { tenantId, recipeName } = req.body;
         const recipe = await Recipe.findOne({ tenantId, name: recipeName })
 
         if (!recipe) {
