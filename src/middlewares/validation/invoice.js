@@ -50,7 +50,9 @@ exports.validateInvoice = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Quantity is required'),
+        .withMessage('Quantity is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Quantity must be greater than zero'),
 
     check('ingredients.*.unit')
         .trim()
@@ -62,25 +64,50 @@ exports.validateInvoice = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Unit price is required'),
+        .withMessage('Unit price is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Unit price must be greater than zero'),
 
     check('ingredients.*.total')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Ingredient total is required'),
+        .withMessage('Ingredient total is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Ingredient total must be greater than zero'),
 
     check('payment')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Payment mode is required'),
+        .withMessage('Payment mode is required')
+        .isIn(['Net Banking', 'Cash', 'Credit/Debit Card'])
+        .withMessage('Payment mode must be one of the given options'),
+
+    check('statusType')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Invoice Status is required')
+        .isIn(['Pending Review', 'Pending Approval'])
+        .withMessage('Invoice status type invalid'),
 
     check('total')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Total amount is required'),
+        .withMessage('Total amount is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Total amount must be greater than zero'),
+]
+
+exports.validateInvoiceStatus = [
+    check('newStatus')
+        .trim()
+        .not()
+        .isEmpty()
+        .isIn(['Pending Review', 'Pending Approval', 'Review-Rejected', 'Approval-Rejected', 'Processed-PendingPayment', 'Processed-Paid'])
+        .withMessage('Invoice status type invalid'),
 ]
 
 exports.invoiceValidation = (req, res, next) => {

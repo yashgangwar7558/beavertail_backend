@@ -95,9 +95,6 @@ exports.userSignIn = async (req, res) => {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     username: user.username,
-                    email: user.email,
-                    mobileNo: user.mobileNo,
-                    address: user.address,
                     roles: user.roles,
                     tenant: user.tenantId,
                     userAllowedRoutes

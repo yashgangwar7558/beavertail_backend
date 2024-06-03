@@ -16,8 +16,8 @@ exports.createInvoice = async (req, res) => {
             const fileType = req.file.mimetype;
             const bucketName = process.env.BUCKET_NAME;
             const folderPath = 'invoices';
-            const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
-            // const invoiceUrl = 'https://www.google.com/';
+            // const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
+            const invoiceUrl = 'https://www.google.com/';
 
             if (!invoiceUrl) {
                 throw new Error('Error uploading file to S3');

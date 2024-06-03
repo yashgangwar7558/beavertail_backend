@@ -15,28 +15,6 @@ const { createAlert } = require('../../controllers/alert/alert')
 exports.createRecipe = async (req, res) => {
     try {
         const { tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body;
-        // const ingredients = JSON.parse(req.body.ingredients)
-        // const yields = JSON.parse(req.body.yields)
-
-        // const missingFields = [];
-
-        // if (!tenantId) missingFields.push('User unauthenticated');
-        // if (!name) missingFields.push('Recipe Name');
-        // if (!category) missingFields.push('Recipe Type');
-        // if (!subCategory) missingFields.push('Recipe Sub Type');
-        // if (!methodPrep) missingFields.push('Method of Preperation');
-        // if (!modifierCost) missingFields.push('Modifier Cost');
-        // if (!menuPrice) missingFields.push('Menu Price');
-        // if (!menuType) missingFields.push('Menu Type');
-        // if (!yields) missingFields.push('Yields');
-        // if (ingredients.length == 0) missingFields.push('Ingredients');
-
-        // if (missingFields.length > 0) {
-        //     return res.json({
-        //         success: false,
-        //         message: `Missing fields: ${missingFields.join(', ')}`,
-        //     });
-        // }
 
         const existingRecipe = await Recipe.findOne({ name, tenantId });
 
@@ -99,31 +77,7 @@ exports.createRecipe = async (req, res) => {
 
 exports.updateRecipe = async (req, res) => {
     try {
-        const { recipeId, imageUrl, tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body;
-        // const ingredients = JSON.parse(req.body.ingredients)
-        // const yields = JSON.parse(req.body.yields)
-
-        // const missingFields = [];
-
-        // if (!tenantId) missingFields.push('User unauthenticated');
-        // if (!recipeId) missingFields.push('Recipe does not exist');
-        // if (!imageUrl) missingFields.push('Media');
-        // if (!name) missingFields.push('Recipe Name');
-        // if (!category) missingFields.push('Recipe Type');
-        // if (!subCategory) missingFields.push('Recipe Sub Type');
-        // if (!methodPrep) missingFields.push('Method of Preperation');
-        // if (!modifierCost) missingFields.push('Modifier Cost');
-        // if (!menuPrice) missingFields.push('Menu Price');
-        // if (!menuType) missingFields.push('Menu Type');
-        // if (!yields) missingFields.push('Yields');
-        // if (ingredients.length == 0) missingFields.push('Ingredients');
-
-        // if (missingFields.length > 0) {
-        //     return res.json({
-        //         success: false,
-        //         message: `Missing fields: ${missingFields.join(', ')}`,
-        //     });
-        // }
+        const { recipeId, imageUrl, tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body
 
         const existingRecipe = await Recipe.findById(recipeId)
         if (!existingRecipe) {
