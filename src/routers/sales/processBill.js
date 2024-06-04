@@ -7,6 +7,11 @@ const {
 
 const { isAuth } = require('../../middlewares/auth');
 
-router.post('/process-bill', processBill);
+const {
+    validateBill,
+    billValidation
+} = require('../../middlewares/validation/bill')
+
+router.post('/process-bill', validateBill, billValidation, processBill);
 
 module.exports = router;

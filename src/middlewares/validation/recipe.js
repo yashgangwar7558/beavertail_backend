@@ -39,7 +39,9 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Type is required'),
+        .withMessage('Type is required')
+        .isIn(['Food', 'Beverage'])
+        .withMessage('Recipe type invalid'),
 
     check('subCategory')
         .trim()
@@ -55,7 +57,9 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Yield Quantity is required'),
+        .withMessage('Yield Quantity is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Yield Quantity must be greater than zero'),
 
     check('yields.*.unit')
         .trim()
@@ -89,7 +93,9 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Ingredient Quantity is required'),
+        .withMessage('Ingredient Quantity is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Ingredient Quantity must be greater than zero'),
 
     check('ingredients.*.unit')
         .trim()
@@ -101,13 +107,17 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Additional Cost is required'),
+        .withMessage('Additional Cost is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Additional Cost must be greater than zero'),
 
     check('menuPrice')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Menu Price is required'),
+        .withMessage('Menu Price is required')
+        .isFloat({ min: 0.01 })
+        .withMessage('Menu Price must be greater than zero'),
 
     check('menuType')
         .trim()

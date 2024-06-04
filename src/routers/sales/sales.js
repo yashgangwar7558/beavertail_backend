@@ -11,7 +11,6 @@ const {
 
 const { isAuth } = require('../../middlewares/auth');
 
-
 router.post('/get-bills', getAllBills);
 router.post('/get-bills-count-bw-dates', getBillsCountBetweenDates);
 router.post('/total-sales-bw-dates', totalSalesBetweenDates);
