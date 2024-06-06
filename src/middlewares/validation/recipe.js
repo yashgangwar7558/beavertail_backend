@@ -1,4 +1,7 @@
 const { check, validationResult } = require('express-validator')
+const mongoose = require('mongoose')
+const Types = require('../../models/recipe/types');
+const unitMapping = require('../../models/ingredient/unitmapping');
 
 exports.parseRecipeYields = (req, res, next) => {
     try {
@@ -22,6 +25,46 @@ exports.parseRecipeIngredients = (req, res, next) => {
     }
 }
 
+const validateSubCategory = async (value, { req }) => {
+    const tenantId = req.body.tenantId;
+    const category = req.body.category;
+
+    const recipeType = await Types.findOne({ tenantId, type: category, subType: value });
+    if (!recipeType) {
+        throw new Error(`Invalid Sub-Category for the selected Category: ${category}`);
+    }
+
+    return true
+}
+
+const validateIngredientUnit = async (units, { req }) => {
+    try {
+        const errors = []
+        for (let ingredient of req.body.ingredients) {
+            const unit = ingredient.unit
+            const ingredientId = ingredient.ingredient_id
+
+            const unitMap = await unitMapping.findOne({ ingredient_id: ingredientId })
+
+            console.log(unitMap)
+
+            if (!unitMap || !unitMap.fromUnit.some(fromUnit => fromUnit.unit === unit)) {
+                errors.push(ingredient.name)
+            }
+        }
+
+        if (errors.length > 0) {
+            req.invalidIngredients = errors
+            return Promise.reject(errors)
+        }
+
+        return true;
+    } catch (err) {
+        console.log(err);
+        throw new Error('Server error during validation');
+    }
+}
+
 exports.validateRecipe = [
     check('tenantId')
         .trim()
@@ -41,13 +84,15 @@ exports.validateRecipe = [
         .isEmpty()
         .withMessage('Type is required')
         .isIn(['Food', 'Beverage'])
-        .withMessage('Recipe type invalid'),
+        .withMessage('Invalid recipe Category. Allowed categories are Food and Beverage'),
 
     check('subCategory')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Sub Type is required'),
+        .withMessage('Sub Type is required')
+        .custom(validateSubCategory)
+        .withMessage('Invalid recipe Sub-Category for the selected Category.'),
 
     check('yields')
         .isArray({ min: 1 })
@@ -65,7 +110,9 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Yield Unit is required'),
+        .withMessage('Yield Unit is required')
+        .isIn(['Each', 'Serving'])
+        .withMessage('Invalid yield unit. Allowed units are Each and Serving'),
 
     check('methodPrep')
         .trim()
@@ -101,7 +148,11 @@ exports.validateRecipe = [
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Ingredient Unit is required'),
+        .withMessage('Ingredient Unit is required')
+        .custom((units, { req }) => validateIngredientUnit(units, { req }))
+        .withMessage((value, { req }) => {
+            return `Invalid unit in ingredients: ${req.invalidIngredients.join(', ')}`;
+        }),
 
     check('modifierCost')
         .trim()
