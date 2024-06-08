@@ -14,13 +14,14 @@ exports.parseInvoiceIngredients = (req, res, next) => {
 
 const validateIngredientUnit = async (units, { req }) => {
     try {
-        const validUnits = ['kg', 'g', 'lbs', 'oz', 'l', 'ml', 'gal', 'piece'];
+        const validUnits = ['ts', 'tsp', 'kg', 'g', 'lbs', 'oz', 'l', 'ml', 'gal', 'piece'];
         const errors = [];
         for (let ingredient of req.body.ingredients) {
             const unit = ingredient.unit;   
-            const ingredientId = ingredient.ingredient_id;
+            const tenantId = req.body.tenantId;
+            const ingredientName = ingredient.name;
 
-            const unitMap = await unitMapping.findOne({ ingredient_id: ingredientId });
+            const unitMap = await unitMapping.findOne({ tenantId, name: ingredientName });
 
             if (!unitMap && !validUnits.includes(unit)) {
                 errors.push(ingredient.name);
@@ -39,7 +40,7 @@ const validateIngredientUnit = async (units, { req }) => {
         console.log(err);
         throw new Error('Server error during validation');
     }
-};
+}
 
 exports.validateInvoice = [
     check('tenantId')

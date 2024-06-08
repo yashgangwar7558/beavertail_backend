@@ -46,8 +46,6 @@ const validateIngredientUnit = async (units, { req }) => {
 
             const unitMap = await unitMapping.findOne({ ingredient_id: ingredientId })
 
-            console.log(unitMap)
-
             if (!unitMap || !unitMap.fromUnit.some(fromUnit => fromUnit.unit === unit)) {
                 errors.push(ingredient.name)
             }
