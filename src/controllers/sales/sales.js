@@ -5,16 +5,27 @@ const Sales = require('../../models/sales/sales');
 const { formatDate } = require('../helper');
 const { log } = require('console');
 
-exports.createBill = async (tenantId, billNumber, customerName, billingDate, itemsOrdered, total, session) => {
+exports.createBill = async (tenantId, billNumber, customerName, billingDate, itemsOrdered, total, taxPercent, totalPayable, session) => {
     try {
+
+        let bill_total = 0;
+        itemsOrdered.forEach(item => {
+            item.total = parseFloat((item.quantity * item.menuPrice).toFixed(2))
+            bill_total += item.total;
+        })
+
+        const bill_totalPayable =  parseFloat((bill_total + ((bill_total * taxPercent) / 100)).toFixed(2))
+
         const result = await Sales.create([{
             tenantId,
             billNumber,
             customerName,
             billingDate,
             itemsOrdered,
-            total
-        }], {session})
+            total: bill_total.toFixed(2),
+            taxPercent,
+            totalPayable: bill_totalPayable.toFixed(2),
+        }], { session })
         return result[0]
     } catch (err) {
         console.log('Error creating bill:', err.message);
@@ -46,7 +57,7 @@ exports.getBillsCountBetweenDates = async (req, res) => {
         const CstartDate = new Date(startDate)
         const CendDate = new Date(endDate)
 
-        const countBills  = await Sales.countDocuments({
+        const countBills = await Sales.countDocuments({
             tenantId: tenantId,
             billingDate: {
                 $gte: new Date(CstartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')),

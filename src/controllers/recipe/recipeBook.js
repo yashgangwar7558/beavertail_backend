@@ -40,8 +40,8 @@ exports.createRecipe = async (req, res) => {
             const fileType = req.file.mimetype
             const bucketName = process.env.BUCKET_NAME
             const folderPath = 'recipes'
-            // const imageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
-            const imageUrl = 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8ZG9zYXxlbnwwfHwwfHx8MA%3D%3D'
+            const imageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
+            // const imageUrl = 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8ZG9zYXxlbnwwfHwwfHx8MA%3D%3D'
 
             const recipe = await Recipe.create({
                 tenantId,

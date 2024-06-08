@@ -59,7 +59,7 @@ exports.validateBill = [
         .isFloat({ min: 0.01 })
         .withMessage('Item total must be greater than zero'),
 
-    check('subTotal')
+    check('total')
         .trim()
         .not()
         .isEmpty()
@@ -67,13 +67,13 @@ exports.validateBill = [
         .isFloat({ min: 0.01 })
         .withMessage('Subtotal must be greater than zero'),
 
-    check('tax')
+    check('taxPercent')
         .trim()
         .not()
         .isEmpty()
         .withMessage('Tax is required'),
 
-    check('total')
+    check('totalPayable')
         .trim()
         .not()
         .isEmpty()

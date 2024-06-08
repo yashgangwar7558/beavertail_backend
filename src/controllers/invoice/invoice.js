@@ -16,8 +16,8 @@ exports.createInvoice = async (req, res) => {
             const fileType = req.file.mimetype;
             const bucketName = process.env.BUCKET_NAME;
             const folderPath = 'invoices';
-            // const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
-            const invoiceUrl = 'https://www.google.com/';
+            const invoiceUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath);
+            // const invoiceUrl = 'https://www.google.com/';
 
             if (!invoiceUrl) {
                 throw new Error('Error uploading file to S3');
@@ -34,6 +34,12 @@ exports.createInvoice = async (req, res) => {
                 });
             }
 
+            let invoice_total = 0;
+            ingredients.forEach(ingredient => {
+                ingredient.total = parseFloat((ingredient.quantity * ingredient.unitPrice).toFixed(2))
+                invoice_total += ingredient.total;
+            });
+
             const invoice = await Invoice.create([{
                 tenantId,
                 invoiceNumber,
@@ -45,7 +51,7 @@ exports.createInvoice = async (req, res) => {
                     type: statusType || 'Pending Review',
                     remark: ''
                 },
-                total,
+                total: invoice_total.toFixed(2),
                 invoiceUrl,
             }])
             res.json({ success: true, invoice })
@@ -171,6 +177,12 @@ exports.updateInvoice = async (req, res) => {
             })
         }
 
+        let invoice_total = 0;
+        ingredients.forEach(ingredient => {
+            ingredient.total = parseFloat((ingredient.quantity * ingredient.unitPrice).toFixed(2))
+            invoice_total += ingredient.total;
+        });
+
         const updatedInvoice = await Invoice.findByIdAndUpdate(invoiceId, {
             invoiceNumber,
             vendor,
@@ -181,7 +193,7 @@ exports.updateInvoice = async (req, res) => {
                 type: statusType || 'Pending Review',
                 remark: ''
             },
-            total
+            total: invoice_total.toFixed(2)
         }, {
             new: true
         });
@@ -234,7 +246,7 @@ exports.deleteInvoice = async (req, res) => {
         const bucketName = process.env.BUCKET_NAME
 
         const result = await Invoice.deleteOne({ _id: invoiceId });
-        // await deleteFromGCS(invoiceUrl, bucketName)
+        await deleteFromGCS(invoiceUrl, bucketName)
 
         res.json({ success: true, message: 'Invoice deleted!' });
     } catch (err) {

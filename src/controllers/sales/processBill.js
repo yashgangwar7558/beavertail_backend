@@ -9,7 +9,7 @@ exports.processBill = async (req, res) => {
     const session = await mongoose.startSession();
     try {
         await session.withTransaction(async () => {
-            const { tenantId, billNumber, customerName, billingDate, itemsOrdered, total } = req.body;
+            const { tenantId, billNumber, customerName, billingDate, itemsOrdered, total, taxPercent, totalPayable } = req.body;
 
             let billCreated;
 
@@ -22,6 +22,8 @@ exports.processBill = async (req, res) => {
                     billingDate,
                     itemsOrdered,
                     total,
+                    taxPercent,
+                    totalPayable,
                     session
                 )
             } catch (error) {

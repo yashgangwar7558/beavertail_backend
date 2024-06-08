@@ -15,6 +15,8 @@ const billSchema = new mongoose.Schema({
     billingDate: { type: Date },
     itemsOrdered: [menuItemOrderedSchema],
     total: { type: String, required: true },
+    taxPercent: { type: Number},
+    totalPayable: { type: String},
 });
 
 const Sales = mongoose.model('Sales', billSchema);
