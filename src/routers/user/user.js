@@ -19,6 +19,8 @@ const { isAuth } = require('../../middlewares/auth')
 const {
   validateUserSignUp,
   validateUserSignIn,
+  validatePasswordChange,
+  validateUpdateUser,
   userValidation,
 } = require('../../middlewares/validation/user')
 
@@ -29,8 +31,8 @@ router.post('/get-user', getUser);
 router.post('/get-nonapproved-users', getNonApprovedUsers);
 router.post('/get-approved-users', getApprovedUsers);
 router.post('/get-user-allowed-routes', userAllowedRoutes);
-router.post('/update-user', updateUser);
+router.post('/update-user', validateUpdateUser, userValidation, updateUser);
 router.post('/update-user-status', updateUserStatus);
-router.post('/change-password', changePassword);
+router.post('/change-password', validatePasswordChange, userValidation, changePassword);
 
 module.exports = router;

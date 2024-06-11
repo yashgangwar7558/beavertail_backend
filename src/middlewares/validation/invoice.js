@@ -17,7 +17,7 @@ const validateIngredientUnit = async (units, { req }) => {
         const validUnits = ['ts', 'tsp', 'kg', 'g', 'lbs', 'oz', 'l', 'ml', 'gal', 'piece'];
         const errors = [];
         for (let ingredient of req.body.ingredients) {
-            const unit = ingredient.unit;   
+            const unit = ingredient.unit;
             const tenantId = req.body.tenantId;
             const ingredientName = ingredient.name;
 
@@ -40,6 +40,17 @@ const validateIngredientUnit = async (units, { req }) => {
         console.log(err);
         throw new Error('Server error during validation');
     }
+}
+
+const checkUniqueIngredients = async (ingredients) => {
+    const names = ingredients.map(ingredient => ingredient.name);
+    const uniqueNames = new Set(names);
+
+    if (names.length !== uniqueNames.size) {
+        throw new Error('Ingredients must have unique names');
+    }
+
+    return true;
 }
 
 exports.validateInvoice = [
@@ -69,7 +80,9 @@ exports.validateInvoice = [
 
     check('ingredients')
         .isArray({ min: 1 })
-        .withMessage('Add atleast one ingredient'),
+        .withMessage('Add atleast one ingredient')
+        .custom((ingredients) => checkUniqueIngredients(ingredients))
+        .withMessage('Found mutiple Ingredients with the same name'),
 
     check('ingredients.*.name')
         .trim()

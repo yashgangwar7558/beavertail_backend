@@ -63,6 +63,17 @@ const validateIngredientUnit = async (units, { req }) => {
     }
 }
 
+const checkUniqueIngredients = async (ingredients) => {
+    const ids = ingredients.map(ingredient => ingredient._id);
+    const uniqueIds = new Set(ids);
+
+    if (ids.length !== uniqueIds.size) {
+        throw new Error('Ingredients must have unique names');
+    }
+
+    return true;
+}
+
 exports.validateRecipe = [
     check('tenantId')
         .trim()
@@ -120,7 +131,9 @@ exports.validateRecipe = [
 
     check('ingredients')
         .isArray({ min: 1 })
-        .withMessage('Add atleast one ingredient'),
+        .withMessage('Add atleast one ingredient')
+        .custom((ingredients) => checkUniqueIngredients(ingredients))
+        .withMessage('Found mutiple Ingredients with the same name'),
 
     check('ingredients.*.name')
         .trim()

@@ -104,13 +104,13 @@ exports.userSignIn = async (req, res) => {
             case 'pending_admin_approval':
                 return res.json({
                     success: false,
-                    message: 'Pending approval by the admin. Please contact your admin!',
+                    message: 'Pending approval by the Admin. Please contact your restraunt Admin!',
                 });
 
             case 'pending_superadmin_approval':
                 return res.json({
                     success: false,
-                    message: 'Pending approval by the superadmin. Please contact beavertail customer support!',
+                    message: 'Pending approval by the Superadmin. Please contact Beavertail customer support!',
                 });
 
             case 'declined':
@@ -195,7 +195,7 @@ exports.getApprovedUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
     try {
         const { _id, username, firstName, lastName, email, mobileNo, address, tenantId, status, roles } = req.body;
-
+        console.log(req.body);
         const updateObject = {
             username: username,
             firstName: firstName,
@@ -214,7 +214,7 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        res.json({ success: true, user: updatedUser });
+        res.json({ success: true, message: 'User updated successfull' });
     } catch (err) {
         console.error('Error updating user:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -275,29 +275,15 @@ exports.userAllowedRoutes = async (userId) => {
 
 exports.changePassword = async (req, res) => {
     try {
-        const { userId, oldPassword, newPassword, confNewPassword } = req.body;
-
-        if (!oldPassword || !newPassword || !confNewPassword) {
-            return res.json({
-                success: false,
-                message: 'Some fields are missing.',
-            });
-        }
+        const { userId, prevPassword, newPassword } = req.body;
 
         const user = await User.findById(userId);
 
-        const isMatch = await user.comparePassword(oldPassword);
+        const isMatch = await user.comparePassword(prevPassword);
         if (!isMatch) {
             return res.json({
                 success: false,
-                message: 'Old password is incorrect.',
-            });
-        }
-
-        if (newPassword !== confNewPassword) {
-            return res.json({
-                success: false,
-                message: 'New password and confirm new password do not match.',
+                message: 'Previous password is incorrect.',
             });
         }
 

@@ -52,6 +52,12 @@ exports.updateIngredientPricesInventory = async (ingredientId, newAvgCost, newIn
 exports.updateIngredientThreshold = async (req, res) => {
     try {
         const { ingredientId, newThreshold } = req.body
+        if (newThreshold < 0) {
+            return res.json({
+                success: false,
+                message: 'Threshold cannot be negative',
+            })
+        }
         const updateIngredient = await Ingredient.findById(ingredientId);
         updateIngredient.threshold = newThreshold;
         const result = await updateIngredient.save();

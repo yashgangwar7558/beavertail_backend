@@ -10,6 +10,7 @@ async function connectToMongoDB() {
     } else {
         await mongoose.connect(CONNECTION_URL,
             {
+                dbName: 'Beavertail',
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
             }
