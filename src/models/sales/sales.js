@@ -5,7 +5,7 @@ const menuItemOrderedSchema = new mongoose.Schema({
     quantity: { type: Number },
     menuPrice: { type: Number },
     total: { type: Number }
-});
+})
 
 const billSchema = new mongoose.Schema({
     tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Tenant' },
@@ -17,7 +17,9 @@ const billSchema = new mongoose.Schema({
     total: { type: String, required: true },
     taxPercent: { type: Number},
     totalPayable: { type: String},
-});
+})
+
+billSchema.index({ tenantId: 1, billingDate: 1 });
 
 const Sales = mongoose.model('Sales', billSchema);
 

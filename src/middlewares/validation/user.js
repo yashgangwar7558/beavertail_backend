@@ -1,4 +1,30 @@
-const { check, validationResult } = require('express-validator');
+const { check, body, validationResult } = require('express-validator')
+const Role = require('../../models/user/role')
+
+const checkUniqueRoles = async (rolesAssigned) => {
+  const ids = rolesAssigned.map(role => role._id);
+  const uniqueIds = new Set(ids);
+
+  if (ids.length !== uniqueIds.size) {
+    throw new Error('Roles must be unique');
+  }
+
+  return true;
+}
+
+const checkInvalidRoles = async (rolesAssigned, { req }) => {
+  const { tenantId } = req.body
+
+  const roleIds = rolesAssigned.map(role => mongoose.Types.ObjectId(role._id))
+  const roles = await Role.find({ _id: { $in: roleIds }, tenantId: tenantId })
+
+  const foundRoleIds = roles.map(role => role._id.toString())
+  const invalidRoles = roleIds.filter(role => !foundRoleIds.includes(role))
+
+  if (invalidRoles.length > 0) {
+    throw new Error(`The following roles are invalid or do not exist for the given tenant: ${invalidRoles.join(', ')}`);
+  }
+}
 
 exports.validateUserSignUp = [
   check('username')
@@ -163,6 +189,35 @@ exports.validateUpdateUser = [
     .withMessage('Mobile number is required!')
     .isMobilePhone('any', { strictMode: false })
     .withMessage('Invalid mobile number!'),
+]
+
+exports.validateUserStatus = [
+  body('status')
+    .if(body('newStatus').not().exists())
+    .trim()
+    .not()
+    .isEmpty()
+    .withMessage('User Status is required')
+    .isIn(['declined', 'approved', 'pending_admin_approval', 'pending_superadmin_approval'])
+    .withMessage('Invalid user status'),
+
+  body('newStatus')
+    .if(body('status').not().exists())
+    .trim()
+    .not()
+    .isEmpty()
+    .withMessage('User Status is required')
+    .isIn(['declined', 'approved', 'pending_admin_approval', 'pending_superadmin_approval'])
+    .withMessage('Invalid user status'),
+]
+
+exports.validateUserRoles = [
+  check('rolesAssigned')
+    .isArray({ min: 1 })
+    .withMessage('Assign atleast one role')
+    .custom((rolesAssigned) => checkUniqueRoles(rolesAssigned))
+    .withMessage('Roles assigned must be unique')
+    .custom((rolesAssigned, { req }) => checkInvalidRoles(rolesAssigned, { req }))
 ]
 
 exports.userValidation = (req, res, next) => {

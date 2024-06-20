@@ -426,7 +426,7 @@ exports.monthWiseSalesExpenseProfit = async (req, res) => {
             const monthStartDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth(), 1);
             const monthEndDate = new Date(CstartDate.getFullYear(), CstartDate.getMonth() + 1, 0);
 
-            const recipeSalesData = await exports.recipeWiseSalesDataBetweenDates(tenantId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'));
+            const recipeSalesData = await exports.recipeWiseSalesDataBetweenDates(tenantId, monthStartDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'), monthEndDate.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'))
             const monthyear = await formatMonthYear(monthStartDate)
 
             let totalSales = 0;

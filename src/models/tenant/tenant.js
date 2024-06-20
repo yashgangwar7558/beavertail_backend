@@ -27,11 +27,6 @@ const tenantSchema = new mongoose.Schema({
         ref: 'User',
         default: [],
     }],
-    adminId: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: []
-    }]
 });
 
 const Tenant = new mongoose.model("Tenant", tenantSchema);

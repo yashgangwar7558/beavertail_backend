@@ -6,13 +6,6 @@ exports.createTenant = async (req, res) => {
     try {
         const { tenantName, tenantDescription, featureIds, invoiceEmails, billEmails } = req.body
 
-        if (!tenantName || !tenantDescription || !featureIds) {
-            return res.json({
-                success: false,
-                message: 'Some required fields are missing!',
-            });
-        }
-
         const tenant = await Tenant.create({
             tenantName,
             tenantDescription,
@@ -31,13 +24,6 @@ exports.createTenant = async (req, res) => {
 exports.updateTenant = async (req, res) => {
     try {
         const { _id, tenantName, tenantDescription, featureIds, invoiceEmails, billEmails } = req.body;
-
-        if (!_id || !tenantName || !tenantDescription || !featureIds) {
-            return res.json({
-                success: false,
-                message: 'Some required fields are missing!',
-            });
-        }
 
         const updatedTenant = await Tenant.findByIdAndUpdate(
             _id,
@@ -60,7 +46,7 @@ exports.updateTenant = async (req, res) => {
             });
         }
 
-        res.json({ success: true, tenant: updatedTenant });
+        res.json({ success: true, message: 'Tenant updated successfully'});
     } catch (error) {
         console.error('Error updating tenant:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });

@@ -20,7 +20,9 @@ const ingredientSchema = new mongoose.Schema({
   note: { type: String },
   shelfLife: { type: Number },
   slUnit: { type: String },
-});
+})
+
+ingredientSchema.index({ tenantId: 1 })
 
 const Ingredient = mongoose.model('Ingredient', ingredientSchema);
 

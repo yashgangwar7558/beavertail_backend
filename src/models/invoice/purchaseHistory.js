@@ -11,7 +11,12 @@ const purchaseHistorySchema = new mongoose.Schema({
     unitPrice: { type: Number },
     total: { type: String },
     createdAt: { type: Date, default: Date.now }
-});
+})
+
+purchaseHistorySchema.index({ tenantId: 1, invoiceId: 1 });
+purchaseHistorySchema.index({ tenantId: 1 });
+purchaseHistorySchema.index({ ingredientId: 1 });
+purchaseHistorySchema.index({ createdAt: 1 });
 
 const purchaseHistory = mongoose.model('purchaseHistory', purchaseHistorySchema);
 

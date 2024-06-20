@@ -30,6 +30,8 @@ const recipeSchema = new mongoose.Schema({
   inventory: { type: Boolean },
 });
 
+recipeSchema.index({ tenantId: 1 })
+
 const Recipe = mongoose.model('Recipe', recipeSchema);
 
 module.exports = Recipe;

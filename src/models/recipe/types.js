@@ -25,6 +25,8 @@ const recipeTypesSchema = new mongoose.Schema({
     imageUrl: { type: String }
 });
 
+recipeTypesSchema.index({ tenantId: 1 })
+recipeTypesSchema.index({ tenantId: 1, type: 1 });
 const Types = mongoose.model('Types', recipeTypesSchema);
 
 module.exports = Types;

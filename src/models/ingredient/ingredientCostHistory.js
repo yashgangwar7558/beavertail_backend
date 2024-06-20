@@ -6,7 +6,9 @@ const ingredientCostHistorySchema = new mongoose.Schema({
     cost: {type: Number, required: true},
     unit: {type: String, required: true},
     date: {type: Date, required: true}
-});
+})
+
+ingredientCostHistorySchema.index({ recipeId: 1, date: -1 })
 
 const ingredientCostHistory = mongoose.model('ingredientCostHistory', ingredientCostHistorySchema);
 

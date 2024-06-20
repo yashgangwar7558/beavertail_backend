@@ -25,7 +25,11 @@ const invoiceSchema = new mongoose.Schema({
     },
     total: { type: String, required: true },
     invoiceUrl: { type: String, required: true },
-});
+})
+
+invoiceSchema.index({ tenantId: 1, invoiceDate: 1 })
+invoiceSchema.index({ tenantId: 1 })
+invoiceSchema.index({ vendor: 1 })
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
 

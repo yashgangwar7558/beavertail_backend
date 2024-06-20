@@ -64,5 +64,9 @@ connectToMongoDB()
         });
 
         socketConnection(server)
-
     })
+    .catch((err) => {
+        console.error("Server not live!")
+        console.error("Failed to connect to database:", err.message)
+        process.exit(1);
+    });

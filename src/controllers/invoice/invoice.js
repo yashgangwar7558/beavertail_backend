@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const Invoice = require('../../models/invoice/invoice');
-const { formatDate, uploadToGCS, deleteFromGCS } = require('../helper');
+const { formatDate, uploadToGCS, deleteFromGCS, extractInvoiceOpenAI, extractInvoiceVertexAI } = require('../helper');
 const { checkIngredientsThreshold } = require('../ingredient/ingredients')
 const { log } = require('console');
 
@@ -71,7 +71,17 @@ exports.createInvoice = async (req, res) => {
 exports.extractInvoiceData = async (req, res) => {
     try {
         if (req.file) {
-            extractedData = {
+            const { buffer } = req.file;
+            const fileName = `invoice_${Date.now()}`;
+            const fileType = req.file.mimetype;
+            const bucketName = process.env.BUCKET_NAME;
+            const folderPath = 'extract';
+
+            // const extractedDataAI = await extractInvoiceOpenAI(buffer)
+            const extractedDataAI = await extractInvoiceVertexAI(buffer)
+            console.log(extractedDataAI)
+
+            const extractedData = {
                 invoiceNumber: '133400406',
                 vendor: 'Gordon Food Service',
                 invoiceDate: '2012-06-20',
@@ -151,7 +161,7 @@ exports.extractInvoiceData = async (req, res) => {
                 total: '406.69'
             }
 
-            res.json({ success: true, extractedData })
+            res.json({ success: true, extractedData: extractedDataAI })
 
         } else {
             return res.json({

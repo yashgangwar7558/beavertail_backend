@@ -49,7 +49,7 @@ const validateIngredientUnit = async (units, { req }) => {
             if (!unitMap || !unitMap.fromUnit.some(fromUnit => fromUnit.unit === unit)) {
                 errors.push(ingredient.name)
             }
-        }
+        }   
 
         if (errors.length > 0) {
             req.invalidIngredients = errors

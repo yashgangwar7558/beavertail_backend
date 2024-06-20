@@ -9,8 +9,11 @@ const salesHistorySchema = new mongoose.Schema({
     quantity: { type: Number },
     menuPrice: { type: Number },
     total: { type: Number }
-});
+})
+
+salesHistorySchema.index({ tenantId: 1, recipeId: 1 });
+salesHistorySchema.index({ tenantId: 1, billingId: 1, recipeId: 1 });
 
 const salesHistory = mongoose.model('salesHistory', salesHistorySchema);
 
-module.exports = salesHistory;
+module.exports = salesHistory

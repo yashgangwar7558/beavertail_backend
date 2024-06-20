@@ -1,8 +1,15 @@
 const AWS = require('../config/awsConfig');
-const storage = require('../config/gcpStorageConfig');
+const { storage, vertexAI } = require('../config/gcpConfig')
+const openai = require('../config/openAIConfig');
 const path = require('path');
 const { recipeWiseSalesDataBetweenDates, typeWiseSalesDataBetweenDates } = require('./sales/salesHistory')
 const Ingredient = require('../models/ingredient/ingredients');
+
+const { PDFDocument } = require('pdf-lib')
+const { createCanvas } = require('canvas')
+const Jimp = require('jimp')
+const { fromBuffer } = require('pdf2pic');
+const { fileURLToPath } = require('url');
 
 const s3 = new AWS.S3();
 
@@ -86,49 +93,6 @@ exports.getConversionFactor = (fromUnit, toUnit, fromUnitArray) => {
     }
 };
 
-exports.uploadToS3 = async (fileBuffer, fileName, fileType, bucketName, folderPath) => {
-    try {
-
-        if (folderPath && !folderPath.endsWith('/')) {
-            folderPath += '/';
-        }
-
-        const params = {
-            Bucket: bucketName,
-            Key: folderPath + fileName,
-            Body: fileBuffer,
-            ContentType: fileType,
-            ContentDisposition: 'inline',
-            ACL: 'bucket-owner-full-control'
-        };
-
-        const uploadResult = await s3.upload(params).promise();
-
-        return uploadResult.Location;
-    } catch (error) {
-        console.error('Error uploading to S3:', error.message);
-        throw error;
-    }
-};
-
-exports.deleteFromS3 = async (objectUrl, bucketName) => {
-    try {
-        const objectKey = new URL(objectUrl).pathname.substr(1);
-        const decodedObjectKey = decodeURIComponent(objectKey);
-
-        const params = {
-            Bucket: bucketName,
-            Key: decodedObjectKey,
-        };
-
-        await s3.deleteObject(params).promise();
-
-        console.log(`File deleted successfully: ${decodedObjectKey}`);
-    } catch (error) {
-        console.error('Error deleting file from S3:', error.message);
-        throw error;
-    }
-}
 
 exports.uploadToGCS = async (fileBuffer, fileName, fileType, bucketName, folderPath) => {
     try {
@@ -154,7 +118,6 @@ exports.uploadToGCS = async (fileBuffer, fileName, fileType, bucketName, folderP
 
             stream.on('finish', () => {
                 const publicUrl = `https://storage.googleapis.com/${bucketName}/${folderPath}${fileName}`;
-                console.log('File uploaded successfully. Public URL:', publicUrl);
                 resolve(publicUrl);
             });
 
@@ -177,68 +140,182 @@ exports.deleteFromGCS = async (objectUrl, bucketName) => {
         const file = bucket.file(objectNameWithoutBucket);
 
         await file.delete();
-
-        console.log(`File deleted successfully: ${objectNameWithoutBucket}`);
     } catch (error) {
         console.error('Error deleting file from GCS:', error.message);
         throw error;
     }
-};
+}
 
-// exports.checkRecipesThreshold = async (tenantId, startDate, endDate) => {
-//     try {
-//         const recipesSalesData = await recipeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
-//         console.log('recipesSalesData', recipesSalesData);
-//         const typesSalesData = await typeWiseSalesDataBetweenDates(tenantId, startDate, endDate);
-//         const foodCostRecipe = recipesSalesData.filter(recipe => {
-//             return (recipe.theoreticalCostWomc > 50);
-//         });
+const getFileType = async (buffer) => {
+    const { fileTypeFromBuffer } = await import('file-type');
+    return await fileTypeFromBuffer(buffer);
+}
 
-//         const foodCostType = typesSalesData.filter(type => {
-//             return (type.theoreticalCostWomc > 50);
-//         });
+const convertPdfToImage = async (buffer) => {
+    const options = {
+        density: 100,
+        format: "png",
+        width: 600,
+        height: 600
+    }
+    const convert = fromBuffer(buffer, options)
 
-//         const marginRecipe = recipesSalesData.filter(recipe => {
-//             return (recipe.theoreticalCostWmc < 50);
-//         });
+    const imageResult = await convert(1, { responseType: "buffer" })
+    console.log(imageResult.buffer);
 
-//         const marginType = typesSalesData.filter(type => {
-//             return (type.theoreticalCostWmc < 50);
-//         });
+    return imageResult.buffer
+}
 
-//         console.log('Food Cost Recipes:', foodCostRecipe);
-//         console.log('Food Cost Types:', foodCostType);
-//         console.log('Margin Recipes:', marginRecipe);
-//         console.log('Margin Types:', marginType);
+const uploadInvoiceToGCS = async (buffer, fileName, fileType) => {
+    const bucketName = process.env.BUCKET_NAME
+    const bucket = storage.bucket(bucketName);
+    const extension = fileType === 'application/pdf' ? 'pdf' : 'png';
+    const file = bucket.file(`extract/${fileName}.${extension}`);
 
-//         return({foodCostRecipe, foodCostType, marginRecipe, marginType})
-//     } catch (error) {
-//         console.error('Error checking menu item for threshold:', error.message);
-//         throw error;
-//     }
-// }
+    await file.save(buffer, {
+        metadata: { contentType: fileType },
+        public: true
+    })
 
-// exports.checkIngredientsThreshold = async (tenantId, purchasedIngredients) => {
-//     try {
-//         const ingredients = await Ingredient.find({ tenantId: tenantId });
-//         const ingredientsExceedingThreshold = [];
+    return `gs://${bucketName}/extract/${fileName}.${extension}`
+    // return `https://storage.googleapis.com/${bucketName}/extract/${fileName}.${extension}`
+}
 
-//         for (const purchaseIngredient of purchasedIngredients) {
-//             const ingredient = ingredients.find(item => item.name === purchaseIngredient.name);
+const extractTextFromPdf = async (buffer) => {
+    const { createWorker } = require('tesseract.js')
+    const worker = await createWorker("eng");
+    await worker.load();
+    await worker.loadLanguage('eng');
+    await worker.initialize('eng');
+    const { data } = await worker.recognize(buffer);
+    await worker.terminate();
 
-//             if (ingredient && ingredient.threshold !== 0) {
-//                 const priceDifference = purchaseIngredient.unitPrice - ingredient.medianPurchasePrice;
-//                 const thresholdAmount = ingredient.medianPurchasePrice * (ingredient.threshold / 100);
+    return data.text;
+}
 
-//                 if (priceDifference > thresholdAmount) {
-//                     ingredientsExceedingThreshold.push(ingredient);
-//                 }
-//             }
-//         }
+exports.modelprompt = `Extract Invoice number/Reference Number/REF as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice Date as invoiceDate, Total payable amount after taxes as total and list of items named ingredients as array of objects with fields description as name, Qty as quantity, Unit Price as unitPrice, Amount as total. Also return just JSON format in pretty format with no additional texts
+                    {
+                        invoiceNumber: ''
+                        vendor: '',
+                        invoiceDate: 'mm-dd-yyyy',
+                        ingredients: [
+                            {
+                                name: ''
+                                quantity: 'if item quantity not readable/mentioned in bill/invoice then take quantity as 1' 
+                                unitPrice: 'if quantity is 1 then item unitPrice and total same'
+                                total: 'if quantity is 1 then item unitPrice and total same'
+                            },
+                        ]
+                        total: ''
+                    }
+                    Any numerical value should be without commas like 15,000 should be taken as 15000
+                    `
 
-//         return ingredientsExceedingThreshold;
-//     } catch (error) {
-//         console.error('Error checking menu item for threshold:', error.message);
-//         throw error;
-//     }
-// }
+exports.extractInvoiceOpenAI = async (buffer) => {
+    try {
+        const type = await getFileType(buffer);
+        let imageBuffer;
+        let extractedData;
+        const fileName = `invoice_${Date.now()}`;
+
+        if (type.mime === 'application/pdf') {
+            const text = await extractTextFromPdf(buffer)
+            console.log(text)
+            const response = await openai.chat.completions.create({
+                model: "gpt-4-turbo",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: `Extract the following information from the provided text:\n\n${text}\n\n Return Invoice number as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice Date as invoiceDate, Total Amount as total and list of items named ingredients as array of objects with fields description as name, Qty as quantity, Unit Price as unitPrice, Amount as total. Also return just JSON format with no additional texts` },
+                        ],
+                    },
+                ],
+                max_tokens: 1200,
+            });
+
+            extractedData = response.choices[0].message.content;
+        } else if (['image/png', 'image/jpeg'].includes(type.mime)) {
+            imageBuffer = buffer;
+            const imageURL = await uploadInvoiceToGCS(imageBuffer, fileName);
+            console.log(imageURL);
+            const response = await openai.chat.completions.create({
+                model: "gpt-4-turbo",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            {
+                                type: "text", text: exports.modelprompt
+                            },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: imageURL,
+                                },
+                            },
+                        ],
+                    },
+                ],
+                max_tokens: 1200,
+            });
+            extractedData = response.choices[0].message.content
+        } else {
+            throw new Error('Unsupported file type');
+        }
+
+        const startIndex = extractedData.indexOf('{')
+        const endIndex = extractedData.lastIndexOf('}') + 1
+        const jsonStr = extractedData.slice(startIndex, endIndex)
+
+        return JSON.parse(jsonStr)
+    } catch (error) {
+        console.error('Error extracting invoice data through openAI:', error.message);
+        throw error;
+    }
+}
+
+exports.extractInvoiceVertexAI = async (buffer) => {
+    const type = await getFileType(buffer);
+    let fileUrl;
+
+    if (type.mime === 'application/pdf') {
+        fileUrl = await uploadInvoiceToGCS(buffer, `invoice_${Date.now()}`, type.mime);
+    } else if (['image/png', 'image/jpeg'].includes(type.mime)) {
+        fileUrl = await uploadInvoiceToGCS(buffer, `invoice_${Date.now()}`, type.mime)
+    } else {
+        throw new Error('Unsupported file type')
+    }
+
+    console.log(fileUrl)
+
+    const filePart = {
+        file_data: {
+            file_uri: fileUrl,
+            mime_type: type.mime,
+        },
+    };
+
+    const textPart = {
+        text: exports.modelprompt,
+    }
+
+    const request = {
+        contents: [{ role: 'user', parts: [filePart, textPart] }],
+    };
+
+    const generativeModel = await vertexAI.getGenerativeModel({
+        model: 'gemini-1.5-pro-preview-0409',
+    })
+
+    const resp = await generativeModel.generateContent(request)
+    const extractedData = resp.response.candidates[0].content
+
+    const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1];
+    const jsonResponse = JSON.parse(jsonString)
+
+    await exports.deleteFromGCS(fileUrl, bucketName = process.env.BUCKET_NAME)
+
+    return (jsonResponse);
+}
+

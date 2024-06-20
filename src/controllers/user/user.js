@@ -238,7 +238,7 @@ exports.updateUserStatus = async (req, res) => {
 
         const updatedUser = await User.findByIdAndUpdate(userId, updateObject, { new: true });
 
-        res.json({ success: true, user: updatedUser });
+        res.json({ success: true, user: 'User status and roles updated successfully' });
     } catch (err) {
         console.error('Error updating user status:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });

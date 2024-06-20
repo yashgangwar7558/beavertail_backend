@@ -11,7 +11,11 @@ const alertsSchema = new mongoose.Schema({
     severity: { type: String, required: true },
     reference: { type: String, required: true },
     active: { type: Boolean, required: true, default: true },
-});
+})
+
+alertsSchema.index({ tenantId: 1 })
+alertsSchema.index({ tenantId: 1, active: 1 })
+alertsSchema.index({ date: -1 })
 
 const alertTemplates = {
     'Price_Ingredient': {

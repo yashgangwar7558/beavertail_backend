@@ -21,18 +21,20 @@ const {
   validateUserSignIn,
   validatePasswordChange,
   validateUpdateUser,
+  validateUserStatus,
+  validateUserRoles,
   userValidation,
 } = require('../../middlewares/validation/user')
 
-router.post('/create-user', validateUserSignUp, userValidation, createUser);
+router.post('/create-user', validateUserSignUp, validateUserStatus, userValidation, createUser);
 router.post('/sign-in', validateUserSignIn, userValidation, userSignIn);
 router.post('/sign-out', isAuth, userSignOut);
 router.post('/get-user', getUser);
 router.post('/get-nonapproved-users', getNonApprovedUsers);
 router.post('/get-approved-users', getApprovedUsers);
 router.post('/get-user-allowed-routes', userAllowedRoutes);
-router.post('/update-user', validateUpdateUser, userValidation, updateUser);
-router.post('/update-user-status', updateUserStatus);
+router.post('/update-user', validateUpdateUser, validateUserStatus, userValidation, updateUser);
+router.post('/update-user-status', validateUserStatus, userValidation, updateUserStatus);
 router.post('/change-password', validatePasswordChange, userValidation, changePassword);
 
 module.exports = router;

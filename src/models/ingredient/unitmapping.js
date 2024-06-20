@@ -12,7 +12,9 @@ const unitmappingSchema = new mongoose.Schema({
     fromUnit: [fromUnitSchema],
     toUnit: { type: String, required: true },
     description: { type: String, required: true}
-});
+})
+
+unitmappingSchema.index({ tenantId: 1 });
 
 const unitMapping = mongoose.model('unitMapping', unitmappingSchema);
 
