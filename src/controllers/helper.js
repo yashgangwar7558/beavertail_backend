@@ -193,23 +193,23 @@ const extractTextFromPdf = async (buffer) => {
     return data.text;
 }
 
-exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice/Billing Date as invoiceDate, Total of items without any taxes or additional charges as total, Total payable amount after taxes as totalPayable and list of items named ingredients as array of objects with fields in which take description/item as name, Qty/Quantity as quantity, Unit Price per quantity as unitPrice, total Amount of particular item as total. Also return just JSON format in pretty format with no additional texts
-                    {
-                        invoiceNumber: ''
-                        vendor: '',
-                        invoiceDate: 'mm-dd-yyyy',
-                        ingredients: [
-                            {
-                                name: 'item description/name'
-                                quantity: 'if item quantity not readable/mentioned in bill/invoice then take quantity as 1' 
-                                unitPrice: 'if quantity is 1 then item unitPrice and total same, if unitPrice not mentioned then take unitPrice as item total divided by quantity'
-                                total: 'if quantity is 1 then item unitPrice and total same'
-                            },
-                        ]
-                        total: 'total before any additional charges/discounts'
-                        totalPayable: 'payable amt after all taxes/discounts'
-                    }
-                    Any numerical value should be without commas like 15,000 should be taken as 15000
+exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice/Billing Date as invoiceDate, Total of items without any taxes or additional charges as total, Total payable amount after taxes as totalPayable and list of items named ingredients as array of objects with fields in which take description/item as name, Qty/Quantity as quantity, Unit Price per quantity as unitPrice, total Amount of particular item as total. Also return just JSON format in pretty format with no additional texts.
+                       Imp: dont return any numerical value with commas in it like 3,240 should be 3240
+                        {
+                            invoiceNumber: ''
+                            vendor: '',
+                            invoiceDate: 'mm-dd-yyyy',
+                            ingredients: [
+                                {
+                                    name: 'item description/name'
+                                    quantity: 'if item quantity not readable/mentioned in bill/invoice then take quantity as 1' 
+                                    unitPrice: 'if quantity is 1 then item unitPrice and total same, if unitPrice not mentioned then take unitPrice as item total divided by quantity'
+                                    total: 'if quantity is 1 then item unitPrice and total same'
+                                },
+                            ]
+                            total: 'total before any additional charges/discounts'
+                            totalPayable: 'payable amt after all taxes/discounts, or after adding previous balance or deducting already paid amount'  '
+                        }
                     `
 
 exports.extractInvoiceOpenAI = async (buffer) => {
