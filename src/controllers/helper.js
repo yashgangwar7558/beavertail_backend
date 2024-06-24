@@ -193,20 +193,21 @@ const extractTextFromPdf = async (buffer) => {
     return data.text;
 }
 
-exports.modelprompt = `Extract Invoice number/Reference Number/REF as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice Date as invoiceDate, Total payable amount after taxes as total and list of items named ingredients as array of objects with fields description as name, Qty as quantity, Unit Price as unitPrice, Amount as total. Also return just JSON format in pretty format with no additional texts
+exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice/Billing Date as invoiceDate, Total of items without any taxes or additional charges as total, Total payable amount after taxes as totalPayable and list of items named ingredients as array of objects with fields in which take description/item as name, Qty/Quantity as quantity, Unit Price per quantity as unitPrice, total Amount of particular item as total. Also return just JSON format in pretty format with no additional texts
                     {
                         invoiceNumber: ''
                         vendor: '',
                         invoiceDate: 'mm-dd-yyyy',
                         ingredients: [
                             {
-                                name: ''
+                                name: 'item description/name'
                                 quantity: 'if item quantity not readable/mentioned in bill/invoice then take quantity as 1' 
                                 unitPrice: 'if quantity is 1 then item unitPrice and total same'
                                 total: 'if quantity is 1 then item unitPrice and total same'
                             },
                         ]
-                        total: ''
+                        total: 'total before any additional charges/discounts'
+                        totalPayable: 'payable amt after all taxes/discounts'
                     }
                     Any numerical value should be without commas like 15,000 should be taken as 15000
                     `
@@ -311,7 +312,7 @@ exports.extractInvoiceVertexAI = async (buffer) => {
     const resp = await generativeModel.generateContent(request)
     const extractedData = resp.response.candidates[0].content
 
-    const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1];
+    const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1].trim();
     const jsonResponse = JSON.parse(jsonString)
 
     await exports.deleteFromGCS(fileUrl, bucketName = process.env.BUCKET_NAME)
