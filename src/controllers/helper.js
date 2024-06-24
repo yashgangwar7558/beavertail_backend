@@ -202,7 +202,7 @@ exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNu
                             {
                                 name: 'item description/name'
                                 quantity: 'if item quantity not readable/mentioned in bill/invoice then take quantity as 1' 
-                                unitPrice: 'if quantity is 1 then item unitPrice and total same'
+                                unitPrice: 'if quantity is 1 then item unitPrice and total same, if unitPrice not mentioned then take unitPrice as item total divided by quantity'
                                 total: 'if quantity is 1 then item unitPrice and total same'
                             },
                         ]
@@ -311,7 +311,6 @@ exports.extractInvoiceVertexAI = async (buffer) => {
 
     const resp = await generativeModel.generateContent(request)
     const extractedData = resp.response.candidates[0].content
-
     const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1].trim();
     const jsonResponse = JSON.parse(jsonString)
 

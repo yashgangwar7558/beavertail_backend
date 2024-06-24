@@ -20,14 +20,14 @@ const formattedPrivateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n')
 // Authenticate Google Cloud Storage
 const storage = new Storage({
   credentials
-});
+})
 
 // Authenticate Vertex AI
 const vertexAI = new VertexAI({
   project: process.env.PROJECT_ID,
   location: 'us-central1',
   credentials
-});
+})
 
 module.exports = {
   storage,
