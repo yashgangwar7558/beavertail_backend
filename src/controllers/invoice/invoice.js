@@ -79,6 +79,13 @@ exports.extractInvoiceData = async (req, res) => {
 
             // const extractedDataAI = await extractInvoiceOpenAI(buffer)
             const extractedDataAI = await extractInvoiceVertexAI(buffer)
+
+            const total = Number(extractedDataAI.total || 0);  
+            const additions = Number(extractedDataAI.additions || 0);  
+            const deductions = Number(extractedDataAI.deductions || 0); 
+            const totalPayable = total + additions - deductions;    
+            extractedDataAI.totalPayable = Math.abs(totalPayable);
+
             console.log(extractedDataAI)
 
             const extractedData = {

@@ -207,7 +207,9 @@ exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNu
                                     total: 'if quantity is 1 then item unitPrice and total same'
                                 },
                             ]
-                            total: 'total before any additional charges/discounts'
+                            total: 'total without any additional charges/discounts/taxes'
+                            additions: 'sum of all types of taxes or previous balance left, don't include additional charges already taken in ingredient items'
+                            deductions: 'sum of all discounts or amount already paid by customer or retainer'
                             totalPayable: 'should not be empty, it should be payable amt after all taxes/discounts, or after adding previous balance or deducting already paid amount or deducting the amount already paid as retainer'
                         }
                     `
