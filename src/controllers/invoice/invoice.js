@@ -36,11 +36,11 @@ exports.createInvoice = async (req, res) => {
                 });
             }
 
-            let invoice_total = 0;
-            ingredients.forEach(ingredient => {
-                ingredient.total = parseFloat((ingredient.quantity * ingredient.unitPrice).toFixed(2))
-                invoice_total += ingredient.total;
-            });
+            // let invoice_total = 0;
+            // ingredients.forEach(ingredient => {
+            //     ingredient.total = parseFloat((ingredient.quantity * ingredient.unitPrice).toFixed(2))
+            //     invoice_total += ingredient.total;
+            // });
 
             const invoice = await Invoice.create([{
                 tenantId,
@@ -53,7 +53,8 @@ exports.createInvoice = async (req, res) => {
                     type: statusType || 'Pending Review',
                     remark: ''
                 },
-                total: invoice_total.toFixed(2),
+                // total: invoice_total.toFixed(2),
+                total,
                 totalPayable,
                 invoiceUrl,
             }])
@@ -197,11 +198,11 @@ exports.updateInvoice = async (req, res) => {
             })
         }
 
-        let invoice_total = 0;
-        ingredients.forEach(ingredient => {
-            ingredient.total = parseFloat((ingredient.quantity * ingredient.unitPrice).toFixed(2))
-            invoice_total += ingredient.total;
-        });
+        // let invoice_total = 0;
+        // ingredients.forEach(ingredient => {
+        //     ingredient.total = parseFloat((ingredient.quantity * ingredient.unitPrice).toFixed(2))
+        //     invoice_total += ingredient.total;
+        // });
 
         const updatedInvoice = await Invoice.findByIdAndUpdate(invoiceId, {
             invoiceNumber,
@@ -213,7 +214,8 @@ exports.updateInvoice = async (req, res) => {
                 type: statusType || 'Pending Review',
                 remark: ''
             },
-            total: invoice_total.toFixed(2),
+            // total: invoice_total.toFixed(2),
+            total,
             totalPayable
         }, {
             new: true
