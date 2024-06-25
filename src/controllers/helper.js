@@ -167,18 +167,23 @@ const convertPdfToImage = async (buffer) => {
 }
 
 const uploadInvoiceToGCS = async (buffer, fileName, fileType) => {
-    const bucketName = process.env.BUCKET_NAME
-    const bucket = storage.bucket(bucketName);
-    const extension = fileType === 'application/pdf' ? 'pdf' : 'png';
-    const file = bucket.file(`extract/${fileName}.${extension}`);
+    try {
+        const bucketName = process.env.BUCKET_NAME
+        const bucket = storage.bucket(bucketName);
+        const extension = fileType === 'application/pdf' ? 'pdf' : 'png';
+        const file = bucket.file(`extract/${fileName}.${extension}`);
 
-    await file.save(buffer, {
-        metadata: { contentType: fileType },
-        public: true
-    })
+        await file.save(buffer, {
+            metadata: { contentType: fileType },
+            public: true
+        })
 
-    return `gs://${bucketName}/extract/${fileName}.${extension}`
-    // return `https://storage.googleapis.com/${bucketName}/extract/${fileName}.${extension}`
+        return `gs://${bucketName}/extract/${fileName}.${extension}`
+        // return `https://storage.googleapis.com/${bucketName}/extract/${fileName}.${extension}`
+    } catch (error) {
+        console.error('Error uploading invoice to GCS:', error.message);
+        throw error;
+    }
 }
 
 const extractTextFromPdf = async (buffer) => {
@@ -208,7 +213,7 @@ exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNu
                                 },
                             ]
                             total: 'total without any additional charges/discounts/taxes'
-                            additions: 'sum of all types of taxes or previous balance left, don't include additional charges already taken in ingredient items'
+                            additions: 'sum of all types of taxes or previous balance left'
                             deductions: 'sum of all discounts or amount already paid by customer or retainer'
                             totalPayable: 'should not be empty, it should be payable amt after all taxes/discounts, or after adding previous balance or deducting already paid amount or deducting the amount already paid as retainer'
                         }
@@ -279,45 +284,50 @@ exports.extractInvoiceOpenAI = async (buffer) => {
 }
 
 exports.extractInvoiceVertexAI = async (buffer) => {
-    const type = await getFileType(buffer);
-    let fileUrl;
+    try {
+        const type = await getFileType(buffer);
+        let fileUrl;
 
-    if (type.mime === 'application/pdf') {
-        fileUrl = await uploadInvoiceToGCS(buffer, `invoice_${Date.now()}`, type.mime);
-    } else if (['image/png', 'image/jpeg'].includes(type.mime)) {
-        fileUrl = await uploadInvoiceToGCS(buffer, `invoice_${Date.now()}`, type.mime)
-    } else {
-        throw new Error('Unsupported file type')
+        if (type.mime === 'application/pdf') {
+            fileUrl = await uploadInvoiceToGCS(buffer, `invoice_${Date.now()}`, type.mime);
+        } else if (['image/png', 'image/jpeg'].includes(type.mime)) {
+            fileUrl = await uploadInvoiceToGCS(buffer, `invoice_${Date.now()}`, type.mime)
+        } else {
+            throw new Error('Unsupported file type')
+        }
+
+        console.log(fileUrl)
+
+        const filePart = {
+            file_data: {
+                file_uri: fileUrl,
+                mime_type: type.mime,
+            },
+        }
+
+        const textPart = {
+            text: exports.modelprompt,
+        }
+
+        const request = {
+            contents: [{ role: 'user', parts: [filePart, textPart] }],
+        };
+
+        const generativeModel = await vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-pro-preview-0409',
+        })
+
+        const resp = await generativeModel.generateContent(request)
+        const extractedData = resp.response.candidates[0].content
+        const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1].trim();
+        const jsonResponse = JSON.parse(jsonString)
+
+        await exports.deleteFromGCS(fileUrl, bucketName = process.env.BUCKET_NAME)
+
+        return (jsonResponse)
+    } catch (error) {
+        console.error('Error extracting invoice data through vertexAI:', error.message);
+        throw error;
     }
-
-    console.log(fileUrl)
-
-    const filePart = {
-        file_data: {
-            file_uri: fileUrl,
-            mime_type: type.mime,
-        },
-    };
-
-    const textPart = {
-        text: exports.modelprompt,
-    }
-
-    const request = {
-        contents: [{ role: 'user', parts: [filePart, textPart] }],
-    };
-
-    const generativeModel = await vertexAI.getGenerativeModel({
-        model: 'gemini-1.5-pro-preview-0409',
-    })
-
-    const resp = await generativeModel.generateContent(request)
-    const extractedData = resp.response.candidates[0].content
-    const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1].trim();
-    const jsonResponse = JSON.parse(jsonString)
-
-    await exports.deleteFromGCS(fileUrl, bucketName = process.env.BUCKET_NAME)
-
-    return (jsonResponse);
 }
 

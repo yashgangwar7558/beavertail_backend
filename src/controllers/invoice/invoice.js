@@ -8,7 +8,9 @@ const { log } = require('console');
 
 exports.createInvoice = async (req, res) => {
     try {
-        const { tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total } = req.body;
+        const { tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total, totalPayable } = req.body;
+
+        console.log(totalPayable)
 
         if (req.file) {
             const { buffer } = req.file;
@@ -52,6 +54,7 @@ exports.createInvoice = async (req, res) => {
                     remark: ''
                 },
                 total: invoice_total.toFixed(2),
+                totalPayable,
                 invoiceUrl,
             }])
             res.json({ success: true, invoice })
@@ -84,7 +87,7 @@ exports.extractInvoiceData = async (req, res) => {
             const additions = Number(extractedDataAI.additions || 0);  
             const deductions = Number(extractedDataAI.deductions || 0); 
             const totalPayable = total + additions - deductions;    
-            extractedDataAI.totalPayable = Math.abs(totalPayable);
+            extractedDataAI.totalPayable = totalPayable;
 
             console.log(extractedDataAI)
 
@@ -178,13 +181,13 @@ exports.extractInvoiceData = async (req, res) => {
         }
     } catch (error) {
         console.error('Error extracting data from invoice:', error.message);
-        res.status(500).json({ success: false, message: 'Internal Server Error' });
+        res.json({ success: false, message: 'Internal Server Error' });
     }
 }
 
 exports.updateInvoice = async (req, res) => {
     try {
-        const { invoiceId, tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total } = req.body
+        const { invoiceId, tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total, totalPayable } = req.body
 
         const existingInvoice = await Invoice.findById(invoiceId)
         if (!existingInvoice) {
@@ -210,7 +213,8 @@ exports.updateInvoice = async (req, res) => {
                 type: statusType || 'Pending Review',
                 remark: ''
             },
-            total: invoice_total.toFixed(2)
+            total: invoice_total.toFixed(2),
+            totalPayable
         }, {
             new: true
         });

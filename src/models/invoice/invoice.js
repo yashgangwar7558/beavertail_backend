@@ -24,6 +24,7 @@ const invoiceSchema = new mongoose.Schema({
         remark: String,
     },
     total: { type: String, required: true },
+    totalPayable: { type: String, required: true },
     invoiceUrl: { type: String, required: true },
 })
 
