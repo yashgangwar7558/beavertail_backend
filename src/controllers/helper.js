@@ -219,6 +219,53 @@ exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNu
                         }
                     `
 
+exports.modelprompt1 = `
+Extract the following details from the invoice and return in JSON format without any additional text:
+
+Invoice Number: Extract from fields like "Invoice number", "Reference Number", or "REF#". Return as invoiceNumber.
+
+Vendor Name: Extract the company name that produced the invoice. Return as vendor.
+
+Invoice Date: Extract from fields like "Invoice Date" or "Billing Date". Format as 'MM-DD-YYYY'. Return as invoiceDate.
+
+Total: Extract the sum of item totals without any taxes, discounts, or additional charges. Return as total.
+
+Additions: Sum of all types of taxes or previous balances left. Return as additions.
+
+Deductions: Sum of all discounts or amounts already paid by the customer or retainer. Return as deductions.
+
+Total Payable: Extract the total payable amount after applying all taxes, discounts, previous balances, or already paid amounts. Return as totalPayable.
+
+Ingredients: Extract the list of items with the following details:
+
+Name: Extract from fields like "Description" or "Item". Return as name.
+Quantity: Extract from fields like "Qty" or "Quantity". If not readable or mentioned, default to 1. Return as quantity.
+Unit Price: Extract the unit price per quantity. If not mentioned, calculate as item total / quantity. Return as unitPrice.
+Total: Extract the total amount for the particular item. If quantity is 1, it will be the same as the unit price. Return as total.
+
+Important: Do not include any numerical values with commas, brackets, or dollar signs. E.g., $3,240.97 should be returned as 3240.97.
+
+Output JSON Format:
+
+{
+  "invoiceNumber": "",
+  "vendor": "",
+  "invoiceDate": "MM-DD-YYYY",
+  "ingredients": [
+    {
+      "name": "",
+      "quantity": "",
+      "unitPrice": "",
+      "total": ""
+    }
+  ],
+  "total": "",
+  "additions": "",
+  "deductions": "",
+  "totalPayable": ""
+}
+`
+
 exports.extractInvoiceOpenAI = async (buffer) => {
     try {
         const type = await getFileType(buffer);
@@ -306,7 +353,7 @@ exports.extractInvoiceVertexAI = async (buffer) => {
         }
 
         const textPart = {
-            text: exports.modelprompt,
+            text: exports.modelprompt1,
         }
 
         const request = {
@@ -314,12 +361,21 @@ exports.extractInvoiceVertexAI = async (buffer) => {
         };
 
         const generativeModel = await vertexAI.getGenerativeModel({
-            model: 'gemini-1.5-pro-preview-0409',
+            model: 'gemini-1.5-pro-001',
         })
 
         const resp = await generativeModel.generateContent(request)
         const extractedData = resp.response.candidates[0].content
-        const jsonString = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)[1].trim();
+        const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
+ 
+        let jsonString = null;
+
+        if (jsonStringMatch1) {
+            jsonString = jsonStringMatch1[1].trim();
+        } else {
+            jsonString = extractedData.parts[0].text
+        }
+
         const jsonResponse = JSON.parse(jsonString)
 
         await exports.deleteFromGCS(fileUrl, bucketName = process.env.BUCKET_NAME)
