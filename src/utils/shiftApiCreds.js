@@ -1,10 +1,11 @@
 const axios = require('axios');
+require('dotenv').config()
 const CryptoJS = require('crypto-js');
 
-const HOST = 'https://conecto-api-sandbox.shift4payments.com'
-const LOCATION_ID = '6704'
-const CLIENT_ID = 'd801a6ede6134deb978de4f45f4853da';
-const CLIENT_SECRET = 'c9436263-8c85-408c-a8f6-401b5256bcae';
+const HOST = process.env.HOST
+const LOCATION_ID = process.env.LOCATION_ID
+const CLIENT_ID = process.env.CLIENT_ID
+const CLIENT_SECRET = process.env.CLIENT_SECRET
 
 const timestamp = Math.round(new Date().getTime() / 1000); 
 const requestMethod = 'GET';
