@@ -64,7 +64,7 @@ const validateIngredientUnit = async (units, { req }) => {
 }
 
 const checkUniqueIngredients = async (ingredients) => {
-    const ids = ingredients.map(ingredient => ingredient._id);
+    const ids = ingredients.map(ingredient => ingredient.ingredient_id);
     const uniqueIds = new Set(ids);
 
     if (ids.length !== uniqueIds.size) {
