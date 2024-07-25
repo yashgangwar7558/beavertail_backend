@@ -5,26 +5,33 @@ const Sales = require('../../models/sales/sales');
 const { formatDate } = require('../helper');
 const { log } = require('console');
 
-exports.createBill = async (tenantId, billNumber, customerName, billingDate, itemsOrdered, total, taxPercent, totalPayable, session) => {
+exports.createBill = async (tenantId, billPosRef, billNumber, customerName, billingDate, itemsOrdered, discountAmount, total, taxAmount, totalPayable, session) => {
     try {
 
-        let bill_total = 0;
-        itemsOrdered.forEach(item => {
-            item.total = parseFloat((item.quantity * item.menuPrice).toFixed(2))
-            bill_total += item.total;
-        })
+        // let bill_total = 0;
+        // itemsOrdered.forEach(item => {
+        //     item.total = parseFloat((item.quantity * item.menuPrice).toFixed(2))
+        //     bill_total += item.total;
+        // })
 
-        const bill_totalPayable =  parseFloat((bill_total + ((bill_total * taxPercent) / 100)).toFixed(2))
+        // const bill_totalPayable =  parseFloat((bill_total + ((bill_total * taxPercent) / 100)).toFixed(2))
+
+        const existingBill = await Sales.findOne({ billPosRef }).session(session)
+        if (existingBill) {
+            throw new Error(`Sales record with billPosRef ${billPosRef} already exists.`);
+        }
 
         const result = await Sales.create([{
             tenantId,
+            billPosRef,
             billNumber,
             customerName,
             billingDate,
             itemsOrdered,
-            total: bill_total.toFixed(2),
-            taxPercent,
-            totalPayable: bill_totalPayable.toFixed(2),
+            discountAmount,
+            total: total,
+            taxAmount,
+            totalPayable
         }], { session })
         return result[0]
     } catch (err) {

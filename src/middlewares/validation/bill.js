@@ -51,35 +51,70 @@ exports.validateBill = [
         .isFloat({ min: 0.01 })
         .withMessage('Item price must be greater than zero'),
 
+    check('itemsOrdered.*.discountAmount')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Item Discount Amount is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Item Discount Amount must be greater than zero'),
+
     check('itemsOrdered.*.total')
         .trim()
         .not()
         .isEmpty()
         .withMessage('Item total is required')
-        .isFloat({ min: 0.01 })
+        .isFloat({ min: 0.00 })
         .withMessage('Item total must be greater than zero'),
+
+    check('itemsOrdered.*.taxAmount')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Item Tax Amount is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Item Tax Amount must be greater than zero'),
+
+    check('itemsOrdered.*.totalPayable')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Item Total Payable is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Item Total Payable must be greater than zero'),
+
+    check('discountAmount')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Discount Amount is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Discount Amount must be greater than zero'),
 
     check('total')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Subtotal is required')
-        .isFloat({ min: 0.01 })
-        .withMessage('Subtotal must be greater than zero'),
+        .withMessage('Subtotal is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Subtotal must be greater than zero'),
 
-    check('taxPercent')
+    check('taxAmount')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Tax is required'),
+        .withMessage('Tax amount is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Tax Amount must be greater than zero'),
+
 
     check('totalPayable')
         .trim()
         .not()
         .isEmpty()
-        .withMessage('Total Payable amount is required')
-        .isFloat({ min: 0.01 })
-        .withMessage('Total Payable amount must be greater than zero'),
+        .withMessage('Total Payable amount is required'),
+    // .isFloat({ min: 0.00 })
+    // .withMessage('Total Payable amount must be greater than zero'),
 ]
 
 exports.billValidation = (req, res, next) => {

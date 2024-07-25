@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const connectToMongoDB = require('./db/conn')
 const tenantRouter = require('./routers/tenant/tenant');
+const posRefRouter = require('./routers/tenant/posRef');
 const userRouter = require('./routers/user/user');
 const roleRouter = require('./routers/user/role');
 const featureRouter = require('./routers/user/feature');
@@ -38,6 +39,7 @@ connectToMongoDB()
     .then(() => {
         app.use(userRouter)
         app.use(tenantRouter)
+        app.use(posRefRouter)
         app.use(roleRouter)
         app.use(featureRouter)
         app.use(typesRouter)

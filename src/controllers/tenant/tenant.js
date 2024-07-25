@@ -1,25 +1,39 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const Tenant = require('../../models/tenant/tenant');
+const { createDefaultRoles } = require('../user/role')
 
 exports.createTenant = async (req, res) => {
+    const session = await Tenant.startSession();
+    session.startTransaction();
     try {
-        const { tenantName, tenantDescription, featureIds, invoiceEmails, billEmails } = req.body
+        const { tenantName, tenantDescription, address, country, state, city, invoiceEmails, billEmails, contact } = req.body;
 
-        const tenant = await Tenant.create({
+        const tenant = await Tenant.create([{
             tenantName,
             tenantDescription,
-            featureIds,
+            address,
+            city,
+            state,
+            country,
             invoiceEmails,
             billEmails,
-        });
+            contact
+        }], { session });
 
-        res.json({ success: true, tenant });
+        await createDefaultRoles(tenant[0]._id, session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.json({ success: true, tenantId: tenant[0]._id, message: 'Tenant created successfully' });
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         console.error('Error creating tenant:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
-};
+}
 
 exports.updateTenant = async (req, res) => {
     try {

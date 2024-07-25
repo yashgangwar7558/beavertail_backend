@@ -5,10 +5,13 @@ const salesHistorySchema = new mongoose.Schema({
     recipeId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Recipes'},
     recipeName: {type: String, required: true},
     billingId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Sales'},
-    billNumber: { type: String, required: true},
+    billNumber: { type: String },
     quantity: { type: Number },
     menuPrice: { type: Number },
-    total: { type: Number }
+    discountAmount: { type: Number, default: 0 },
+    total: { type: Number },
+    taxAmount: { type: Number, default: 0 },
+    totalPayable: { type: String, required: true},
 })
 
 salesHistorySchema.index({ tenantId: 1, recipeId: 1 });

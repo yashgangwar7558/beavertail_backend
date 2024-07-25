@@ -9,7 +9,7 @@ const { findAverageCostForRecipeInDateRange } = require('../recipe/recipeCostHis
 const { findAverageModifierCostForRecipeInDateRange } = require('../recipe/modifierCostHistory')
 // const { formatDate, formatMonthYear } = require('../helper');
 
-exports.createSalesHistory = async (tenantId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, total, session) => {
+exports.createSalesHistory = async (tenantId, recipeId, recipeName, billingId, billNumber, quantity, menuPrice, discountAmount, total, taxAmount, totalPayable, session) => {
     try {
         const result = await salesHistory.create([{
             tenantId,
@@ -19,7 +19,10 @@ exports.createSalesHistory = async (tenantId, recipeId, recipeName, billingId, b
             billNumber,
             quantity,
             menuPrice,
+            discountAmount,
             total,
+            taxAmount,
+            totalPayable
         }], { session })
         return result[0]
     } catch (err) {

@@ -9,7 +9,7 @@ exports.processBill = async (req, res) => {
     const session = await mongoose.startSession();
     try {
         await session.withTransaction(async () => {
-            const { tenantId, billNumber, customerName, billingDate, itemsOrdered, total, taxPercent, totalPayable } = req.body;
+            const { tenantId, billPosRef, billNumber, customerName, billingDate, itemsOrdered, discountAmount, total, taxAmount, totalPayable } = req.body;
 
             let billCreated;
 
@@ -17,12 +17,14 @@ exports.processBill = async (req, res) => {
             try {
                 billCreated = await createBill(
                     tenantId,
+                    billPosRef,
                     billNumber,
                     customerName,
                     billingDate,
                     itemsOrdered,
+                    discountAmount,
                     total,
-                    taxPercent,
+                    taxAmount,
                     totalPayable,
                     session
                 )
@@ -38,6 +40,9 @@ exports.processBill = async (req, res) => {
                     const matchingRecipe = AllMenuItems.find(
                         (menuItem) => menuItem.name === itemOrdered.name
                     );
+                    if (!matchingRecipe) {
+                        throw new Error(`Recipe not found for item: ${itemOrdered.name}`);
+                    }
                     const recipeSalesHistory = await createSalesHistory(
                         tenantId,
                         matchingRecipe._id,
@@ -46,7 +51,10 @@ exports.processBill = async (req, res) => {
                         billNumber,
                         itemOrdered.quantity,
                         itemOrdered.menuPrice,
+                        itemOrdered.discountAmount,
                         itemOrdered.total,
+                        itemOrdered.taxAmount,
+                        itemOrdered.totalPayable,
                         session
                     )
                 }
