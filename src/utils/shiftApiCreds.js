@@ -4,8 +4,8 @@ const CryptoJS = require('crypto-js');
 
 const HOST = process.env.HOST
 const locationId = process.env.LOCATION_ID
-const CLIENT_ID = process.env.CLIENT_ID
-const CLIENT_SECRET = process.env.CLIENT_SECRET
+const CLIENT_ID = process.env.SHIFT_CLIENT_ID
+const CLIENT_SECRET = process.env.SHIFT_CLIENT_SECRET
 
 const timestamp = Math.round(new Date().getTime() / 1000);
 const requestMethod = 'POST';

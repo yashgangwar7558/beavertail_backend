@@ -6,6 +6,7 @@ const {
     createRecipe,
     getRecipe,
     getAllRecipe,
+    getSubTypeRecipe,
     deleteRecipe,
     updateRecipe
 } = require('../../controllers/recipe/recipeBook')
@@ -26,6 +27,7 @@ router.post('/create-recipe', upload.single('photo'), parseRecipeYields, parseRe
 router.post('/update-recipe', upload.single('photo'), parseRecipeYields, parseRecipeIngredients, validateRecipe, recipeValidation, updateRecipe);
 router.post('/get-recipe', getRecipe);
 router.post('/get-recipes', getAllRecipe);
+router.post('/get-subtype-recipes', getSubTypeRecipe);
 router.post('/delete-recipe', deleteRecipe);
 
 module.exports = router;

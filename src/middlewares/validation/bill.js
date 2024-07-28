@@ -51,11 +51,11 @@ exports.validateBill = [
         .isFloat({ min: 0.01 })
         .withMessage('Item price must be greater than zero'),
 
-    check('itemsOrdered.*.discountAmount')
-        .trim()
-        .not()
-        .isEmpty()
-        .withMessage('Item Discount Amount is required'),
+    // check('itemsOrdered.*.discountAmount')
+    //     .trim()
+    //     .not()
+    //     .isEmpty()
+    //     .withMessage('Item Discount Amount is required'),
     // .isFloat({ min: 0.00 })
     // .withMessage('Item Discount Amount must be greater than zero'),
 
@@ -67,11 +67,11 @@ exports.validateBill = [
         .isFloat({ min: 0.00 })
         .withMessage('Item total must be greater than zero'),
 
-    check('itemsOrdered.*.taxAmount')
-        .trim()
-        .not()
-        .isEmpty()
-        .withMessage('Item Tax Amount is required'),
+    // check('itemsOrdered.*.taxAmount')
+    //     .trim()
+    //     .not()
+    //     .isEmpty()
+    //     .withMessage('Item Tax Amount is required'),
     // .isFloat({ min: 0.00 })
     // .withMessage('Item Tax Amount must be greater than zero'),
 

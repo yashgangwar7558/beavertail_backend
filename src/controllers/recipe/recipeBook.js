@@ -222,6 +222,36 @@ exports.getAllRecipe = async (req, res) => {
     }
 };
 
+exports.getSubTypeRecipe = async (req, res) => {
+    try {
+        const { tenantId, subCategory } = req.body;
+
+        if (!tenantId || !subCategory) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing tenantId or subType!',
+            });
+        }
+
+        const tenant = await Tenant.findById(tenantId);
+
+        if (!tenant) {
+            return res.status(404).json({
+                success: false,
+                message: 'Tenant not found!',
+            });
+        }
+
+        const recipes = await Recipe.find({ tenantId: tenant._id, subCategory })
+
+        res.json({ success: true, recipes });
+    } catch (error) {
+        console.error('Error fetching subtype recipes:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+
 exports.deleteRecipe = async (req, res) => {
     try {
         const { recipeId } = req.body;

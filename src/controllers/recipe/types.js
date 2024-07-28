@@ -34,9 +34,22 @@ exports.getAllTypes = async (tenantId) => {
     }
 };
 
-exports.getAllSubTypes = async (tenantId, type) => {
+exports.getAllSubTypesOfTypes = async (tenantId, type) => {
     try {
         const subTypes = await Types.find({ tenantId: tenantId, type: type });
+
+        const sortedSubTypes = subTypes.sort((a, b) => a.subType.localeCompare(b.subType));
+
+        return sortedSubTypes;
+    } catch (error) {
+        console.error('Error fetching recipe sub types:', error.message);
+        throw error;
+    }
+};
+
+exports.getAllSubTypes = async (tenantId) => {
+    try {
+        const subTypes = await Types.find({ tenantId: tenantId});
 
         const sortedSubTypes = subTypes.sort((a, b) => a.subType.localeCompare(b.subType));
 

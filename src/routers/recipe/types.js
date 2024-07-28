@@ -4,6 +4,7 @@ const router = express.Router();
 const {
     createRecipeType,
     getAllTypes,
+    getAllSubTypesOfTypes,
     getAllSubTypes
 } = require('../../controllers/recipe/types')
 
@@ -28,7 +29,19 @@ router.post('/get-subtypes', async (req, res) => {
     try {
         // const { Types } = req;
         const { tenantId, type } = req.body
-        const subTypes = await getAllSubTypes(tenantId, type)
+        const subTypes = await getAllSubTypesOfTypes(tenantId, type)
+        res.json({ success: true, subTypes });
+    } catch (error) {
+        console.error('Error fetching recipe sub types:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
+router.post('/get-allsubtypes', async (req, res) => {
+    try {
+        // const { Types } = req;
+        const { tenantId} = req.body
+        const subTypes = await getAllSubTypes(tenantId)
         res.json({ success: true, subTypes });
     } catch (error) {
         console.error('Error fetching recipe sub types:', error.message);

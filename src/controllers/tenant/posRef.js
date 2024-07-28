@@ -1,10 +1,11 @@
 const PosRef = require('../../models/tenant/posRef');
+const Tenant = require('../../models/tenant/tenant');
 
 exports.createPosRef = async (req, res) => {
     try {
         const { posName, posId, identifier, tenantId } = req.body
         if (!posName || !posId || !identifier || !tenantId) {
-            return res.json({success: false, message: 'Some fields are missing'});
+            return res.json({ success: false, message: 'Some fields are missing' });
         }
         const posRef = await PosRef.create({
             tenantId,
@@ -12,6 +13,11 @@ exports.createPosRef = async (req, res) => {
             posName,
             identifier
         })
+
+        const tenant = await Tenant.findById(tenantId);
+        tenant.hasPosIntegrated = true;
+        await tenant.save();
+
         res.status(201).json({ success: true, message: 'PosRef for tenant created successfully' });
     } catch (error) {
         console.error('Error creating PosRef:', error.message);

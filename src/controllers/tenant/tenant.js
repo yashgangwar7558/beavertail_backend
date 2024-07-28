@@ -26,7 +26,7 @@ exports.createTenant = async (req, res) => {
         await session.commitTransaction();
         session.endSession();
 
-        res.json({ success: true, tenantId: tenant[0]._id, message: 'Tenant created successfully' });
+        res.json({ success: true, tenant: tenant[0], message: 'Tenant created successfully' });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
