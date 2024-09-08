@@ -9,6 +9,7 @@ const posRefRouter = require('./routers/tenant/posRef');
 const userRouter = require('./routers/user/user');
 const roleRouter = require('./routers/user/role');
 const featureRouter = require('./routers/user/feature');
+const extractMenuRouter = require('./routers/recipe/menuExtraction');
 const typesRouter = require('./routers/recipe/types');
 const recipesRouter = require('./routers/recipe/recipeBook');
 const ingredientsRouter = require('./routers/ingredient/ingredients');
@@ -20,6 +21,7 @@ const processBillRouter = require('./routers/sales/processBill');
 const salesRouter = require('./routers/sales/sales');
 const salesHistoryRouter = require('./routers/sales/salesHistory');
 const alertsRouter = require('./routers/alert/alert');
+const menuExtractionStatusRouter = require('./routers/recipe/menuExtractionStatus');
 // const recipeCostHistoryRouter = require('./routers/recipe/recipeCostHistory');
 // const modifierCostHistoryRouter = require('./routers/recipe/modifierCostHistory');
 // const ingredientCostHistoryRouter = require('./routers/ingredient/ingredientCostHistory');
@@ -42,6 +44,7 @@ connectToMongoDB()
         app.use(posRefRouter)
         app.use(roleRouter)
         app.use(featureRouter)
+        app.use(extractMenuRouter)
         app.use(typesRouter)
         app.use(recipesRouter)
         app.use(ingredientsRouter)
@@ -53,6 +56,7 @@ connectToMongoDB()
         app.use(salesRouter)
         app.use(salesHistoryRouter)
         app.use(alertsRouter);
+        app.use(menuExtractionStatusRouter);
         // app.use(recipeCostHistoryRouter)
         // app.use(ingredientCostHistoryRouter)
         // app.use(modifierCostHistoryRouter)

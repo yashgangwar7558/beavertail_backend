@@ -127,7 +127,7 @@ exports.uploadToGCS = async (fileBuffer, fileName, fileType, bucketName, folderP
         console.error('Error uploading to GCS:', error.message);
         throw error;
     }
-};
+}
 
 exports.deleteFromGCS = async (objectUrl, bucketName) => {
     try {
@@ -142,14 +142,48 @@ exports.deleteFromGCS = async (objectUrl, bucketName) => {
         await file.delete();
     } catch (error) {
         console.error('Error deleting file from GCS:', error.message);
-        throw error;
+        // throw error;
     }
 }
 
-const getFileType = async (buffer) => {
+exports.getFileType = async (buffer) => {
     const { fileTypeFromBuffer } = await import('file-type');
     return await fileTypeFromBuffer(buffer);
 }
+
+exports.getFileTypeFromGCSUrl = async (fileUrl) => {
+    try {
+      // Parse bucket name and file path from GCS URL
+      const matches = fileUrl.match(/^gs:\/\/([^/]+)\/(.+)$/);
+      if (!matches) {
+        throw new Error('Invalid GCS URL format');
+      }
+  
+      const bucketName = matches[1];
+      const filePath = matches[2];
+  
+      // Get a reference to the file in the bucket
+      const bucket = storage.bucket(bucketName);
+      const file = bucket.file(filePath);
+  
+      // Download the file as a buffer
+      const [fileBuffer] = await file.download();
+  
+      // Detect the file type using the file-type library
+      const type = await FileType.fromBuffer(fileBuffer);
+      if (type) {
+        console.log(`Detected file type: ${type.mime}`);
+        return type.mime;
+      } else {
+        // Fall back to the file extension if the MIME type is not detectable
+        const extension = path.extname(filePath).slice(1);
+        return `application/${extension}`;
+      }
+    } catch (error) {
+      console.error('Error detecting file type:', error.message);
+      throw error;
+    }
+  }
 
 const convertPdfToImage = async (buffer) => {
     const options = {
@@ -186,6 +220,26 @@ const uploadInvoiceToGCS = async (buffer, fileName, fileType) => {
     }
 }
 
+exports.uploadMenuToGCS = async (buffer, fileName, fileType) => {
+    try {
+        const bucketName = process.env.BUCKET_NAME
+        const bucket = storage.bucket(bucketName);
+        const extension = fileType === 'application/pdf' ? 'pdf' : 'png';
+        const file = bucket.file(`menu/${fileName}.${extension}`);
+
+        await file.save(buffer, {
+            metadata: { contentType: fileType },
+            public: true
+        })
+
+        return `gs://${bucketName}/menu/${fileName}.${extension}`
+        // return `https://storage.googleapis.com/${bucketName}/menu/${fileName}.${extension}`
+    } catch (error) {
+        console.error('Error uploading menu to GCS:', error.message);
+        throw error;
+    }
+}
+
 const extractTextFromPdf = async (buffer) => {
     const { createWorker } = require('tesseract.js')
     const worker = await createWorker("eng");
@@ -197,27 +251,6 @@ const extractTextFromPdf = async (buffer) => {
 
     return data.text;
 }
-
-exports.modelprompt = `Extract Invoice number/Reference Number/REF# as invoiceNumber, Vendor Name the company that produced invoice as vendor, Invoice/Billing Date as invoiceDate, Total of items without any taxes or additional charges as total, Total payable amount after taxes as totalPayable and list of items named ingredients as array of objects with fields in which take description/item as name, Qty/Quantity as quantity, Unit Price per quantity as unitPrice, total Amount of particular item as total. Also return just JSON format in pretty format with no additional texts.
-                       Imp: dont return any numerical value with commas or brackets or dollar signs in it. Eg. $3,240.97 should be just 3240.97
-                        {
-                            invoiceNumber: ''
-                            vendor: '',
-                            invoiceDate: 'mm-dd-yyyy',
-                            ingredients: [
-                                {
-                                    name: 'item description/name'
-                                    quantity: 'if item quantity not readable/mentioned in bill/invoice then take quantity as 1' 
-                                    unitPrice: 'if quantity is 1 then item unitPrice and total same, if unitPrice not mentioned then take unitPrice as item total divided by quantity'
-                                    total: 'if quantity is 1 then item unitPrice and total same'
-                                },
-                            ]
-                            total: 'total without any additional charges/discounts/taxes'
-                            additions: 'sum of all types of taxes or previous balance left'
-                            deductions: 'sum of all discounts or amount already paid by customer or retainer'
-                            totalPayable: 'should not be empty, it should be payable amt after all taxes/discounts, or after adding previous balance or deducting already paid amount or deducting the amount already paid as retainer'
-                        }
-                    `
 
 exports.modelprompt1 = `
 Extract the following details from the invoice and return in JSON format without any additional text:
@@ -268,7 +301,7 @@ Output JSON Format:
 
 exports.extractInvoiceOpenAI = async (buffer) => {
     try {
-        const type = await getFileType(buffer);
+        const type = await exports.getFileType(buffer);
         let imageBuffer;
         let extractedData;
         const fileName = `invoice_${Date.now()}`;
@@ -332,7 +365,7 @@ exports.extractInvoiceOpenAI = async (buffer) => {
 
 exports.extractInvoiceVertexAI = async (buffer) => {
     try {
-        const type = await getFileType(buffer);
+        const type = await exports.getFileType(buffer);
         let fileUrl;
 
         if (type.mime === 'application/pdf') {
@@ -367,7 +400,7 @@ exports.extractInvoiceVertexAI = async (buffer) => {
         const resp = await generativeModel.generateContent(request)
         const extractedData = resp.response.candidates[0].content
         const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
- 
+
         let jsonString = null;
 
         if (jsonStringMatch1) {
@@ -387,3 +420,247 @@ exports.extractInvoiceVertexAI = async (buffer) => {
     }
 }
 
+exports.promptExtractMenu = `Read this restaurant menu and return items with there price, category and description in json format.`
+exports.promptExtractCategories = `From this extract the categories in following json format: \n 
+type: Should be either Food or Beverage, so according to actual category figure it out if it comes under Food or Beverage, \n
+subType: Actual category, \n
+
+Even if its single category return as array of objects`
+exports.promptExtractRecipes = `From this extract the items and their ingredients req to build the recipe in following json format. \n 
+name: the item name \n
+category: Food or Beverage depending on the main category of item \n
+subCategory: the main category to which item belongs \n
+methodPrep: method of preparation of this recipe in short \n
+menuPrice: menu price of item in dollar \n
+ingredients: [{ \n
+  name: ingredient name required to create recipe, \n
+  category: type of ingredient like vegetable, fruit, spices or poultry etc \n
+  quantity: just the quantity of ingredient req,  like eg. 1/2 cup so quantity should be just 0.5, always provide some quantity don't make it to taste, also provide sensible quantity like if its sauce then use unit tp, tsp or ml, not directly l(litre) \n
+  unit: unit of quantity, like if quantity is 1/2 cup then unit is cup, eg cup, tsp, tp, g, kg, lbs, oz, l, ml etc. Use sensible units such that quantity is not very less. \n
+}] \n
+
+Note: I want all the ingredients required for a recipe to make, even the smallest ingredients. All should have a quantity and some unit to it.
+Even if its single recipe return as array of objects, even if its a beverage always return recipe dont return anything except json
+Return me the response as json only, Dont want any code or logic to do that. Do it for me itself `
+exports.promptExtractIngredients = `Give me all the list of all unique ingredients from these recipes in json format: \n
+
+name: name of ingredient, keep ingrdient name exactly same as in recipes \n
+category: category of ingredient \n
+invUnit: unit of that ingredient, not necessary to use provided unit. Use the unit that makes sense to store it as inventory. Like spices might be used in recipes in tp or tsp but in inventory stored as lbs or oz. Use units out of g, kg, lbs, oz, l, ml, package, packet batch, can etc
+Even if its single ingredient return as array of objects
+Return me the response as json only, Dont want any code or logic. Do it for me itself `
+exports.promptExtractUnitmapping = `I want to create unitmapping for these items like this eg and return as array of this json objects: \n
+{
+  "name": "Salt",
+  "fromUnit": [
+    {
+      "unit": "ts",
+      "conversion": 1,
+    },
+    {
+      "unit": "g",
+      "conversion": 1,
+    },
+    {
+      "unit": "kg",
+      "conversion": 1000,
+    }
+  ],
+  "toUnit": "g",
+  "description": "standard unit is gram",
+} \n
+
+Take toUnit as the invUnit of ingredient. In fromUnit take all possible unit suitable for a Ingredient like tp, tsp, cup, piece, g, kg, lbs, oz, l, ml, package, packet, batch, can etc.
+Return me the response as json only, Dont want any code or logic. Do it for me itself \n
+`
+
+exports.extractMenu = async (fileUrl, mime) => {
+    try {
+        console.log(fileUrl)
+
+        const filePart = {
+            file_data: {
+                file_uri: fileUrl,
+                mime_type: mime,
+            },
+        }
+
+        const textPart = {
+            text: exports.promptExtractMenu,
+        }
+
+        const request = {
+            contents: [{ role: 'user', parts: [filePart, textPart] }],
+        };
+
+        const generativeModel = await vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-pro-001',
+        })
+
+        const resp = await generativeModel.generateContent(request)
+        const extractedData = resp.response.candidates[0].content
+        const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
+
+        let jsonString = null;
+
+        if (jsonStringMatch1) {
+            jsonString = jsonStringMatch1[1].trim();
+        } else {
+            jsonString = extractedData.parts[0].text
+        }
+
+        const jsonResponse = JSON.parse(jsonString)
+
+        return (jsonResponse)
+    } catch (error) {
+        console.error('Error extracting menu data through vertexAI:', error.message);
+        throw error;
+    }
+}
+
+exports.extractCategories = async (menuJson) => {
+    try {
+        const menuString = JSON.stringify(menuJson)
+        const textPart = {
+            text: `${menuString}\n\n${exports.promptExtractCategories}`,
+        }
+
+        const request = {
+            contents: [{ role: 'user', parts: [textPart] }],
+        };
+
+        const generativeModel = await vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-pro-001',
+        })
+
+        const resp = await generativeModel.generateContent(request)
+        const extractedData = resp.response.candidates[0].content
+        const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
+
+        let jsonString = null;
+
+        if (jsonStringMatch1) {
+            jsonString = jsonStringMatch1[1].trim();
+        } else {
+            jsonString = extractedData.parts[0].text
+        }
+
+        const jsonResponse = JSON.parse(jsonString)
+
+        return (jsonResponse)
+    } catch (error) {
+        console.error('Error extracting categories through vertexAI:', error.message);
+        throw error;
+    }
+}
+
+exports.extractRecipes = async (menuJson) => {
+    try {
+        const menuString = JSON.stringify(menuJson)
+        const textPart = {
+            text: `${menuString}\n\n${exports.promptExtractRecipes}`,
+        }
+
+        const request = {
+            contents: [{ role: 'user', parts: [textPart] }],
+        };
+
+        const generativeModel = await vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-pro-001',
+        })
+
+        const resp = await generativeModel.generateContent(request)
+        const extractedData = resp.response.candidates[0].content
+        const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
+
+        let jsonString = null;
+
+        if (jsonStringMatch1) {
+            jsonString = jsonStringMatch1[1].trim();
+        } else {
+            jsonString = extractedData.parts[0].text
+        }
+
+        const jsonResponse = JSON.parse(jsonString)
+
+        return (jsonResponse)
+    } catch (error) {
+        console.error('Error extracting recipes through vertexAI:', error.message);
+        throw error;
+    }
+}
+
+exports.extractIngredients = async (recipesJson) => {
+    try {
+        const recipesString = JSON.stringify(recipesJson)
+        const textPart = {
+            text: `${recipesString}\n\n${exports.promptExtractIngredients}`,
+        }
+
+        const request = {
+            contents: [{ role: 'user', parts: [textPart] }],
+        };
+
+        const generativeModel = await vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-pro-001',
+        })
+
+        const resp = await generativeModel.generateContent(request)
+        const extractedData = resp.response.candidates[0].content
+        const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
+
+        let jsonString = null;
+
+        if (jsonStringMatch1) {
+            jsonString = jsonStringMatch1[1].trim();
+        } else {
+            jsonString = extractedData.parts[0].text
+        }
+
+        const jsonResponse = JSON.parse(jsonString)
+
+        return (jsonResponse)
+    } catch (error) {
+        console.error('Error extracting ingredients through vertexAI:', error.message);
+        throw error;
+    }
+}
+
+exports.extractUnitmapping = async (ingredientsJson) => {
+    try {
+        const ingredientsString = JSON.stringify(ingredientsJson)
+        const textPart = {
+            text: `${ingredientsString}\n\n${exports.promptExtractUnitmapping}`,
+        }
+
+        const request = {
+            contents: [{ role: 'user', parts: [textPart] }],
+        };
+
+        const generativeModel = await vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-pro-001',
+        })
+
+        const resp = await generativeModel.generateContent(request)
+        const extractedData = resp.response.candidates[0].content
+        const jsonStringMatch1 = extractedData.parts[0].text.match(/```json\n([\s\S]*?)\n```/)
+
+        console.log(extractedData.parts[0].text);
+        
+
+        let jsonString = null;
+
+        if (jsonStringMatch1) {
+            jsonString = jsonStringMatch1[1].trim();
+        } else {
+            jsonString = extractedData.parts[0].text
+        }
+
+        const jsonResponse = JSON.parse(jsonString)
+
+        return (jsonResponse)
+    } catch (error) {
+        console.error('Error extracting unitMapping through vertexAI:', error.message);
+        throw error;
+    }
+}

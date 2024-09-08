@@ -34,6 +34,29 @@ exports.createIngredient = async (tenantId, name, inventory, invUnit, avgCost, s
     }
 };
 
+exports.storeExtractedIngredients = async (tenantId, ingredientsJson, session) => {
+    try {
+        if (!Array.isArray(ingredientsJson)) {
+            throw new Error('ingredientsJson must be an array');
+        }
+
+        for (const ingredient of ingredientsJson) {
+            await Ingredient.create({
+                tenantId,
+                name: ingredient.name,
+                category: ingredient.category,
+                invUnit: ingredient.invUnit 
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error storing extracted ingredients:', error.message);
+        throw error;
+    }
+};
+
+
 exports.updateIngredientPricesInventory = async (ingredientId, newAvgCost, newInventoryQty, newLastPurchasePrice, newMedianPurchasePrice, session) => {
     try {
         const updateIngredient = await Ingredient.findById(ingredientId);

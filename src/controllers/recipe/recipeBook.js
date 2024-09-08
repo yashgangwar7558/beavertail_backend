@@ -14,9 +14,9 @@ const { createAlert } = require('../../controllers/alert/alert')
 
 exports.createRecipe = async (req, res) => {
     try {
-        const { tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body;
+        const { tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body
 
-        const existingRecipe = await Recipe.findOne({ name, tenantId });
+        const existingRecipe = await Recipe.findOne({ name, tenantId })
 
         if (existingRecipe) {
             return res.json({
@@ -75,10 +75,53 @@ exports.createRecipe = async (req, res) => {
     }
 };
 
+exports.storeExtractedRecipes = async (tenantId, recipesJson, session) => {
+    try {
+        if (!tenantId || !Array.isArray(recipesJson)) {
+            throw new Error('Missing tenantId or recipesJson is not valid!')
+        }
+
+        const ingredients = await Ingredient.find({ tenantId }).session(session)
+        const ingredientIdMap = ingredients.reduce((acc, ingredient) => {
+            acc[ingredient.name] = ingredient._id
+            return acc
+        }, {})
+
+        for (const recipe of recipesJson) {
+            const { name, category, subCategory, methodPrep, menuPrice, ingredients } = recipe
+
+            const ingredientsWithIds = ingredients.map(ingredient => {
+                const ingredientId = ingredientIdMap[ingredient.name]
+                if (!ingredientId) {
+                    throw new Error(`Ingredient ${ingredient.name} not found for recipe ${recipe.name}`);
+                }
+                return {
+                    ...ingredient,
+                    ingredient_id: ingredientId
+                }
+            })
+
+            await Recipe.create({
+                tenantId,
+                name,
+                category,
+                subCategory,
+                methodPrep,
+                ingredients: ingredientsWithIds,
+                menuPrice,
+            })
+        }
+
+        return true
+    } catch (error) {
+        console.error('Error storing extracted recipes:', error.message)
+        throw error
+    }
+}
+
 exports.updateRecipe = async (req, res) => {
     try {
         const { recipeId, imageUrl, tenantId, name, category, subCategory, yields, methodPrep, ingredients, modifierCost, menuPrice, menuType } = req.body
-
         const existingRecipe = await Recipe.findById(recipeId)
         if (!existingRecipe) {
             return res.json({
@@ -113,7 +156,13 @@ exports.updateRecipe = async (req, res) => {
             const fileType = req.file.mimetype
             const bucketName = process.env.BUCKET_NAME
             const folderPath = 'recipes'
-            await deleteFromGCS(imageUrl, bucketName)
+            if (imageUrl) {
+                try {
+                    await deleteFromGCS(imageUrl, bucketName);
+                } catch (error) {
+                    console.error('Failed to delete old image. Proceeding with upload.');
+                }
+            }
             const newimageUrl = await uploadToGCS(buffer, fileName, fileType, bucketName, folderPath)
             // const newimageUrl = 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8ZG9zYXxlbnwwfHwwfHx8MA%3D%3D'
 

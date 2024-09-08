@@ -21,6 +21,28 @@ exports.createRecipeType = async (req, res) => {
     }
 }
 
+exports.storeExtractedCategories = async (tenantId, categoriesJson, session) => {
+    try {
+        if (!Array.isArray(categoriesJson)) {
+            throw new Error('categoriesJson must be an array');
+        }
+
+        for (const category of categoriesJson) {
+            await Types.create({
+                tenantId,
+                type: category.type,
+                subType: category.subType,
+                imageUrl: 'https://plus.unsplash.com/premium_photo-1673108852141-e8c3c22a4a22?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Zm9vZHxlbnwwfHwwfHx8MA%3D%3D'
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error storing extracted categories:', error.message);
+        throw error;
+    }
+}
+
 exports.getAllTypes = async (tenantId) => {
     try {
         const types = await Types.find({ tenantId });
@@ -32,7 +54,7 @@ exports.getAllTypes = async (tenantId) => {
         console.error('Error fetching recipe types:', error.message);
         throw error;
     }
-};
+}
 
 exports.getAllSubTypesOfTypes = async (tenantId, type) => {
     try {
@@ -45,7 +67,7 @@ exports.getAllSubTypesOfTypes = async (tenantId, type) => {
         console.error('Error fetching recipe sub types:', error.message);
         throw error;
     }
-};
+}
 
 exports.getAllSubTypes = async (tenantId) => {
     try {
@@ -58,4 +80,4 @@ exports.getAllSubTypes = async (tenantId) => {
         console.error('Error fetching recipe sub types:', error.message);
         throw error;
     }
-};
+}

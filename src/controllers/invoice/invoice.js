@@ -10,8 +10,6 @@ exports.createInvoice = async (req, res) => {
     try {
         const { tenantId, invoiceNumber, vendor, invoiceDate, ingredients, payment, statusType, total, totalPayable } = req.body;
 
-        console.log(totalPayable)
-
         if (req.file) {
             const { buffer } = req.file;
             const fileName = `${invoiceNumber}_${Date.now()}`;

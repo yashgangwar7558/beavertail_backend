@@ -45,7 +45,7 @@ exports.validateUserSignUp = [
     .withMessage('Password is empty!')
     .isLength({ min: 8, max: 20 })
     .withMessage('Password must be 8 to 20 characters long!')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Z][a-zA-Z\d@$!%*?&]{7,19}$/)
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Z][a-zA-Z\d@$!%*?&#]{7,19}$/)
     .withMessage('Password must start with a capital letter, and should contain upper and lower case letters, numbers, and special characters')
     .matches(/^\S*$/)
     .withMessage('Password cannot contain spaces!'),

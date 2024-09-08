@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const User = require('../../models/user/user');
 const Tenant = require('../../models/tenant/tenant');
 const unitMapping = require('../../models/ingredient/unitmapping');
+const Ingredient = require('../../models/ingredient/ingredients');
 
 exports.createUnitMap = async (req, res) => {
     try {
@@ -26,6 +27,43 @@ exports.createUnitMap = async (req, res) => {
     } catch (err) {
         console.error('Error creating unitMap:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.storeExtractedUnitmapping = async (tenantId, unitMappingJson, session) => {
+    try {
+        if (!tenantId || !Array.isArray(unitMappingJson)) {
+            throw new Error('Missing tenantId or unitMappingJson is not valid!');
+        }
+
+        const ingredients = await Ingredient.find({ tenantId }).session(session);
+        const ingredientIdMap = ingredients.reduce((acc, ingredient) => {
+            acc[ingredient.name] = ingredient._id;
+            return acc;
+        }, {});
+
+        for (const unitMap of unitMappingJson) {
+            const { name, fromUnit, toUnit, description } = unitMap;
+            const ingredient_id = ingredientIdMap[name];
+
+            if (!ingredient_id) {
+                throw new Error(`Ingredient with name ${name} not found`);
+            }
+
+            await unitMapping.create({
+                tenantId,
+                ingredient_id,
+                name,
+                fromUnit,
+                toUnit,
+                description
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error storing extracted unitMapping:', error.message);
+        throw error;
     }
 }
 
@@ -63,7 +101,6 @@ exports.getAllUnitMaps = async (req, res) => {
             });
         }
 
-        // Find all ingredients with the specified user ID
         const unitMaps = await unitMapping.find({ tenantId: tenant._id });
 
         res.json({ success: true, unitMaps });

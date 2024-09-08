@@ -15,3 +15,4 @@ exports.socketConnection = (server) => {
 }
 
 exports.sendAlert = (alert) => io.emit('newAlert', alert);
+exports.sendExtractionStatus = (status) => io.emit('newExtractionStatus', status)
