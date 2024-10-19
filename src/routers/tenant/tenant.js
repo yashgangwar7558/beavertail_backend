@@ -4,9 +4,11 @@ const router = express.Router();
 const {
     createTenant,
     getTenant,
-    getAllTenants,
-    getTenantIds,
-    updateTenant
+    getActiveTenants,
+    getActiveTenantIds,
+    updateTenant,
+    createShift4Tenant,
+    markTenantInactive
 } = require('../../controllers/tenant/tenant')
 
 const {
@@ -19,7 +21,10 @@ const { isAuth } = require('../../middlewares/auth');
 router.post('/create-tenant', validateTenant, tenantValidation, createTenant);
 router.post('/update-tenant', validateTenant, tenantValidation, updateTenant);
 router.post('/get-tenant', getTenant);
-router.post('/get-all-tenants', getAllTenants);
-router.post('/get-tenantids', getTenantIds);
+router.post('/get-all-tenants', getActiveTenants);
+router.post('/get-tenantids', getActiveTenantIds);
+router.post('/mark-tenant-inactive', markTenantInactive);
+
+router.post('/create-shift4-tenant', createShift4Tenant);
 
 module.exports = router;

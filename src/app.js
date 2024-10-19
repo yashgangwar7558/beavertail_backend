@@ -3,7 +3,7 @@ require('dotenv').config();
 const { socketConnection } = require('./utils/socket')
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const connectToMongoDB = require('./db/conn')
+const { connectToMongoDB } = require('./db/conn')
 const tenantRouter = require('./routers/tenant/tenant');
 const posRefRouter = require('./routers/tenant/posRef');
 const userRouter = require('./routers/user/user');

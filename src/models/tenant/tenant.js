@@ -20,6 +20,11 @@ const contactSchema = new mongoose.Schema({
 });
 
 const tenantSchema = new mongoose.Schema({
+    isActive: {
+        type: Boolean,
+        required: true,
+        default: true,
+    },
     tenantName: {
         type: String,
         required: true,

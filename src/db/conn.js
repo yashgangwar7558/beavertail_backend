@@ -2,13 +2,14 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 const CONNECTION_URL = process.env.MONGODB_CONNECTION_URL
+let dbInstance;
 
 async function enableProfiling(db, level, slowMs) {
     const command = {
         profile: level,
         slowms: slowMs
     };
-    return db.command(command);
+    return dbInstance.command(command);
 }
 
 async function connectToMongoDB() {
@@ -30,7 +31,7 @@ async function connectToMongoDB() {
                 serverSelectionTimeoutMS: 5000, // Wait up to 5 seconds for server selection
             });
 
-            const db = mongoose.connection.db;
+            dbInstance = mongoose.connection.db;
             // await enableProfiling(db, 1, 100); 
 
             console.log("Successfully connected to the database!")
@@ -41,4 +42,14 @@ async function connectToMongoDB() {
     }
 }
 
-module.exports = connectToMongoDB;
+function getDb() {
+    if (!dbInstance) {
+        throw new Error("Database not initialized. Call connectToMongoDB first.");
+    }
+    return dbInstance;
+}
+
+module.exports = {
+    connectToMongoDB,
+    getDb
+};
