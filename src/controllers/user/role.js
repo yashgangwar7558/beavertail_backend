@@ -97,7 +97,8 @@ exports.getRole = async (req, res) => {
 
 exports.getTenantRoles = async (req, res) => {
     try {
-
+        console.log(req.body);
+        
         const { tenantId } = req.body
 
         const roles = await Role.find({ tenantId: tenantId });

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const Tenant = require('../../models/tenant/tenant');
+const User = require('../../models/user/user');
 const { createDefaultRoles } = require('../user/role')
 const { getDb } = require('../../db/conn')
 
@@ -42,7 +43,7 @@ exports.createShift4Tenant = async (req, res) => {
     session.startTransaction();
     try {
         const { guid } = req.body
-        
+
         const db = getDb();
         const CustomerDataCollection = await db.collection('customerdatas')
         const customerData = await CustomerDataCollection.findOne({ guid: guid });
@@ -62,10 +63,12 @@ exports.createShift4Tenant = async (req, res) => {
 
         await createDefaultRoles(tenant[0]._id, session);
 
+        await exports.createDefaultUser(customerData, tenant[0]._id, session)
+
         const SubscriptionStatusesCollection = await db.collection('subscriptionstatuses');
         await SubscriptionStatusesCollection.updateOne(
-            { guid: guid }, 
-            { $set: { status: 'Installed', tenantId: tenant[0]._id } } 
+            { guid: guid },
+            { $set: { status: 'Installed', tenantId: tenant[0]._id, updatedAt: new Date() } }
         );
 
         await session.commitTransaction();
@@ -76,6 +79,56 @@ exports.createShift4Tenant = async (req, res) => {
         await session.abortTransaction();
         session.endSession();
         console.error('Error creating tenant:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+exports.createDefaultUser = async (customerData, tenantId, session) => {
+    try {
+
+        const restaurantName = customerData.restaurant.name.split(' ')[0]; 
+        const capitalizedRestaurantName = restaurantName.charAt(0).toUpperCase() + restaurantName.slice(1);
+        const randomNumber = Math.floor(10000 + Math.random() * 90000);
+        const username = `${capitalizedRestaurantName}${randomNumber}`;
+        const password = `${capitalizedRestaurantName}@${randomNumber}`;
+
+        const isNewUser1 = await User.isThisEmailInUse(customerData.contact.email)
+        const isNewUser2 = await User.isThisMobileNoInUse(customerData.contact.phone)
+        const isNewUser3 = await User.isThisUsernameInUse(username)
+
+        if (!isNewUser1) {
+            return res.json({
+                success: false,
+                message: 'This Email is already in use!',
+            });
+        } else if (!isNewUser2) {
+            return res.json({
+                success: false,
+                message: 'This Mobile number is already in use!',
+            });
+        } else if (!isNewUser3) {
+            return res.json({
+                success: false,
+                message: 'This Username is already in use!',
+            });
+        }
+
+        const user = await User({
+            username,
+            password,
+            firstName: customerData.contact.firstName,
+            lastName: customerData.contact.lastName,
+            email: customerData.contact.email,
+            mobileNo: customerData.contact.phone,
+            address: (customerData.restaurant.addressLine1 || '') + ' ' + (customerData.restaurant.addressLine2 || ''),
+            roles: [],
+            tenantId,
+            status: 'pending_superadmin_approval'
+        });
+
+        await user.save({ session });
+    } catch (err) {
+        console.error('Error creating user:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
@@ -95,7 +148,7 @@ exports.updateTenant = async (req, res) => {
                     billEmails,
                 },
             },
-            { new: true } 
+            { new: true }
         );
 
         if (!updatedTenant) {
@@ -105,7 +158,7 @@ exports.updateTenant = async (req, res) => {
             });
         }
 
-        res.json({ success: true, message: 'Tenant updated successfully'});
+        res.json({ success: true, message: 'Tenant updated successfully' });
     } catch (error) {
         console.error('Error updating tenant:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -185,14 +238,14 @@ exports.markTenantInactive = async (req, res) => {
                     isActive: false
                 },
             },
-            { new: true } 
+            { new: true }
         );
 
         const db = getDb();
         const SubscriptionStatusesCollection = await db.collection('subscriptionstatuses');
         await SubscriptionStatusesCollection.updateOne(
-            { tenantId: new mongoose.Types.ObjectId(tenantId) }, 
-            { $set: { status: 'Uninstalled'} } 
+            { tenantId: new mongoose.Types.ObjectId(tenantId) },
+            { $set: { status: 'Uninstalled', updatedAt: new Date() } }
         );
 
         res.json({ success: true, message: 'Tenant marked inActive!' });

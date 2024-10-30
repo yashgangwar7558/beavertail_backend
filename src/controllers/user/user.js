@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../../models/user/user');
+const Tenant = require('../../models/tenant/tenant');
 const Feature = require('../../models/user/feature');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
@@ -63,6 +64,14 @@ exports.userSignIn = async (req, res) => {
                 success: false,
                 message: 'No user exists, with the given username!',
             });
+
+        const tenant = await Tenant.findOne({ _id: user.tenantId });
+        if (tenant && 'isActive' in tenant && !tenant.isActive) {
+            return res.json({
+                success: false,
+                message: 'Restaurant does not exist, or is inactive!',
+            });
+        }
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch)
@@ -179,14 +188,62 @@ exports.getNonApprovedUsers = async (req, res) => {
 
 exports.getApprovedUsers = async (req, res) => {
     try {
-        const { tenantId } = req.body
+        const { tenantId } = req.body;
 
-        const selectedFields = '_id username firstName lastName email mobileNo address tenantId status roles'
-        const users = await User.find({ tenantId, status: 'approved' }).select(selectedFields)
+        const selectedFields = '_id username firstName lastName email mobileNo address tenantId status roles';
+
+        const filter = { status: 'approved' };
+
+        if (tenantId) {
+            filter.tenantId = tenantId;
+        }
+
+        const users = await User.find(filter).select(selectedFields);
 
         res.json({ success: true, users });
     } catch (err) {
         console.error('Error getting approved users:', err.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+exports.getApprovedAdminUsers = async (req, res) => {
+    try {
+        const { tenantId } = req.body;
+
+        const selectedFields = '_id username firstName lastName email mobileNo address tenantId status roles';
+
+        // Initialize the filter to always include approved status
+        const filter = {
+            status: 'approved',
+            roles: { $elemMatch: { roleName: 'Admin' } }  // Check if roles array contains at least one role with roleName 'Admin'
+        };
+
+        // Add tenantId to the filter if it's provided
+        if (tenantId) {
+            filter.tenantId = tenantId;
+        }
+
+        const users = await User.find(filter).select(selectedFields);
+
+        res.json({ success: true, users });
+    } catch (err) {
+        console.error('Error getting approved admin users:', err.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+
+
+exports.getNonApprovedAdminUsers = async (req, res) => {
+    try {
+        const selectedFields = '_id username firstName lastName email mobileNo address tenantId status roles';
+
+        const users = await User.find({ status: 'pending_superadmin_approval' }).select(selectedFields);
+
+        res.json({ success: true, users });
+    } catch (err) {
+        console.error('Error getting pending auperadmin approval users:', err.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
