@@ -26,6 +26,8 @@ exports.createTenant = async (req, res) => {
 
         await createDefaultRoles(tenant[0]._id, session);
 
+        await exports.createDefaultUser(tenantName, address, contact.firstName, contact.lastName, contact.email, contact.phone, tenant[0]._id, session)
+
         await session.commitTransaction();
         session.endSession();
 
@@ -48,11 +50,13 @@ exports.createShift4Tenant = async (req, res) => {
         const CustomerDataCollection = await db.collection('customerdatas')
         const customerData = await CustomerDataCollection.findOne({ guid: guid });
 
+        const address = (customerData.restaurant.addressLine1 || '') + ' ' + (customerData.restaurant.addressLine2 || '')
+
         const tenant = await Tenant.create([{
             isActive: true,
             tenantName: customerData.restaurant.name,
             tenantDescription: customerData.restaurant.name,
-            address: (customerData.restaurant.addressLine1 || '') + ' ' + (customerData.restaurant.addressLine2 || ''),
+            address: address,
             city: customerData.restaurant.city,
             state: customerData.restaurant.state,
             country: customerData.restaurant.zip,
@@ -63,7 +67,7 @@ exports.createShift4Tenant = async (req, res) => {
 
         await createDefaultRoles(tenant[0]._id, session);
 
-        await exports.createDefaultUser(customerData, tenant[0]._id, session)
+        await exports.createDefaultUser(customerData.restaurant.name, address, customerData.contact.firstName, customerData.restaurant.lastName, customerData.contact.email, customerData.contact.phone, tenant[0]._id, session)
 
         const SubscriptionStatusesCollection = await db.collection('subscriptionstatuses');
         await SubscriptionStatusesCollection.updateOne(
@@ -83,17 +87,17 @@ exports.createShift4Tenant = async (req, res) => {
     }
 }
 
-exports.createDefaultUser = async (customerData, tenantId, session) => {
+exports.createDefaultUser = async (tenantName, address, firstName, lastName, email, phone, tenantId, session) => {
     try {
 
-        const restaurantName = customerData.restaurant.name.split(' ')[0]; 
+        const restaurantName = tenantName.split(' ')[0]; 
         const capitalizedRestaurantName = restaurantName.charAt(0).toUpperCase() + restaurantName.slice(1);
         const randomNumber = Math.floor(10000 + Math.random() * 90000);
         const username = `${capitalizedRestaurantName}${randomNumber}`;
         const password = `${capitalizedRestaurantName}@${randomNumber}`;
 
-        const isNewUser1 = await User.isThisEmailInUse(customerData.contact.email)
-        const isNewUser2 = await User.isThisMobileNoInUse(customerData.contact.phone)
+        const isNewUser1 = await User.isThisEmailInUse(email)
+        const isNewUser2 = await User.isThisMobileNoInUse(phone)
         const isNewUser3 = await User.isThisUsernameInUse(username)
 
         if (!isNewUser1) {
@@ -116,11 +120,11 @@ exports.createDefaultUser = async (customerData, tenantId, session) => {
         const user = await User({
             username,
             password,
-            firstName: customerData.contact.firstName,
-            lastName: customerData.contact.lastName,
-            email: customerData.contact.email,
-            mobileNo: customerData.contact.phone,
-            address: (customerData.restaurant.addressLine1 || '') + ' ' + (customerData.restaurant.addressLine2 || ''),
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            mobileNo: phone,
+            address: address,
             roles: [],
             tenantId,
             status: 'pending_superadmin_approval'
@@ -186,6 +190,24 @@ exports.getTenant = async (req, res) => {
     }
 };
 
+exports.getAllTenants = async (req, res) => {
+    try {
+        const tenants = await Tenant.find({});
+
+        if (tenants.length == 0) {
+            return res.json({
+                success: false,
+                message: 'No tenants found!',
+            });
+        }
+
+        res.json({ success: true, tenants });
+    } catch (error) {
+        console.error('Error fetching tenants:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
 exports.getActiveTenants = async (req, res) => {
     try {
         const tenants = await Tenant.find({ isActive: true });
@@ -193,13 +215,13 @@ exports.getActiveTenants = async (req, res) => {
         if (tenants.length == 0) {
             return res.json({
                 success: false,
-                message: 'No tenant found!',
+                message: 'No tenants found!',
             });
         }
 
         res.json({ success: true, tenants });
     } catch (error) {
-        console.error('Error fetching tenant:', error.message);
+        console.error('Error fetching tenants:', error.message);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
@@ -227,7 +249,7 @@ exports.getActiveTenantIds = async (req, res) => {
     }
 };
 
-exports.markTenantInactive = async (req, res) => {
+exports.markTenantInactiveByShift4 = async (req, res) => {
     try {
         const { tenantId } = req.body;
 
@@ -248,6 +270,27 @@ exports.markTenantInactive = async (req, res) => {
             { $set: { status: 'Uninstalled', updatedAt: new Date() } }
         );
 
+        res.json({ success: true, message: 'Shift4 tenant marked inActive!' });
+    } catch (error) {
+        console.error('Error marking shift4 tenant inactive:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+exports.markTenantInactive = async (req, res) => {
+    try {
+        const { tenantId } = req.body;
+
+        const updatedTenant = await Tenant.findByIdAndUpdate(
+            tenantId,
+            {
+                $set: {
+                    isActive: false
+                },
+            },
+            { new: true }
+        );
+
         res.json({ success: true, message: 'Tenant marked inActive!' });
     } catch (error) {
         console.error('Error marking tenant inactive:', error.message);
@@ -255,3 +298,23 @@ exports.markTenantInactive = async (req, res) => {
     }
 };
 
+exports.markTenantActive = async (req, res) => {
+    try {
+        const { tenantId } = req.body;
+
+        const updatedTenant = await Tenant.findByIdAndUpdate(
+            tenantId,
+            {
+                $set: {
+                    isActive: true
+                },
+            },
+            { new: true }
+        );
+
+        res.json({ success: true, message: 'Tenant marked Active!' });
+    } catch (error) {
+        console.error('Error marking tenant active:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};

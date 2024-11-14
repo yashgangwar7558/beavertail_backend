@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const recipeCostHistory = require('../../models/recipe/recipeCostHistory');
+const Recipe = require('../../models/recipe/recipeBook');
 
 exports.createRecipeCostHistory = async (tenantId, recipeId, cost, date, session) => {
     try {
@@ -8,7 +9,7 @@ exports.createRecipeCostHistory = async (tenantId, recipeId, cost, date, session
             recipeId,
             cost,
             date: date.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')
-        }], {session})
+        }], { session })
         return result
     } catch (err) {
         console.log('Error creating recipe cost history:', err.message);
@@ -68,10 +69,14 @@ exports.findAverageCostForRecipeInDateRange = async (recipeId, startDate, endDat
 
         const result = await recipeCostHistory.aggregate(pipeline);
 
+        const fallbackResult = await Recipe.findOne(
+            { _id: new mongoose.Types.ObjectId(recipeId) },
+        );
+
         if (result.length > 0) {
             return result[0].averageCost;
         } else {
-            return 0;
+            return fallbackResult?.cost;
         }
     } catch (error) {
         console.error('Error finding average recipe cost:', error.message);
